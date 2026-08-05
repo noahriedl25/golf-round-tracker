@@ -17,7 +17,7 @@
     <main>
         <header class="app-header">
             <h1>Golf Round Tracker</h1>
-            <p>Track your round one hole at a time.</p>
+            <p>By: Noah Riedl</p>
         </header>
 
         <section id="setup-section">
@@ -41,47 +41,97 @@
         </section>
 
         <section id="round-section" class="hidden">
-            <div class="round-status">
-                <div>
-                    <span class="status-label">Hole</span>
-                    <strong id="hole-number">1</strong>
-                </div>
+            
+           <div class="progress-row">
+    <span id="hole-progress">Hole 1 of 18</span>
+    <span id="course-name"></span>
+</div>
 
-                <div>
-                    <span class="status-label">Par</span>
-                    <strong id="hole-par">4</strong>
-                </div>
+<div class="progress-track">
+    <div id="progress-bar"></div>
+</div>
 
-                <div>
-                    <span class="status-label">Yards</span>
-                    <strong id="hole-yardage">375</strong>
-                </div>
-            </div>
+<div class="round-status">
+    <div>
+        <span class="status-label">Hole</span>
+        <strong id="hole-number">1</strong>
+    </div>
+
+    <div>
+        <span class="status-label">Par</span>
+        <strong id="hole-par">4</strong>
+    </div>
+
+    <div>
+        <span class="status-label">Yards</span>
+        <strong id="hole-yardage">375</strong>
+    </div>
+</div> 
 
             <div class="score-summary">
                 <span>Current Score</span>
                 <strong id="current-score">Even</strong>
             </div>
 
-            <div class="input-group">
-                <label for="score-input">Score</label>
-                <input
-                    id="score-input"
-                    type="number"
-                    min="1"
-                >
-            </div>
 
             <div class="input-group">
-                <label for="putts-input">Putts</label>
-                <input
-                    id="putts-input"
-                    type="number"
-                    min="0"
-                >
-            </div>
+    <label for="score-input">Score</label>
+
+    <div class="number-control">
+        <button
+            id="score-minus-button"
+            class="number-button"
+            type="button"
+        >
+            −
+        </button>
+
+        <input
+            id="score-input"
+            type="number"
+            min="1"
+        >
+
+        <button
+            id="score-plus-button"
+            class="number-button"
+            type="button"
+        >
+            +
+        </button>
+    </div>
+</div>
+
 
             <div class="input-group">
+    <label for="putts-input">Putts</label>
+
+    <div class="number-control">
+        <button
+            id="putts-minus-button"
+            class="number-button"
+            type="button"
+        >
+            −
+        </button>
+
+        <input
+            id="putts-input"
+            type="number"
+            min="0"
+        >
+
+        <button
+            id="putts-plus-button"
+            class="number-button"
+            type="button"
+        >
+            +
+        </button>
+    </div>
+</div>
+
+            <div class="input-group" id="fairway-group">
                 <label for="fairway-input">Fairway</label>
 
                 <select id="fairway-input">
@@ -94,17 +144,35 @@
             </div>
 
             <div class="input-group">
-                <label for="penalties-input">
-                    Penalty Strokes
-                </label>
+    <label for="penalties-input">
+        Penalty Strokes
+    </label>
 
-                <input
-                    id="penalties-input"
-                    type="number"
-                    min="0"
-                    value="0"
-                >
-            </div>
+    <div class="number-control">
+        <button
+            id="penalties-minus-button"
+            class="number-button"
+            type="button"
+        >
+            −
+        </button>
+
+        <input
+            id="penalties-input"
+            type="number"
+            min="0"
+            value="0"
+        >
+
+        <button
+            id="penalties-plus-button"
+            class="number-button"
+            type="button"
+        >
+            +
+        </button>
+    </div>
+</div>
 
             <p id="message" class="message"></p>
 

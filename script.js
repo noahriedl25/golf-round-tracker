@@ -18,6 +18,36 @@ const previousButton = document.getElementById("previous-button");
 const nextButton = document.getElementById("next-button");
 const messageText = document.getElementById("message");
 
+const holeProgressText =
+    document.getElementById("hole-progress");
+
+const courseNameText =
+    document.getElementById("course-name");
+
+const progressBar =
+    document.getElementById("progress-bar");
+
+const fairwayGroup =
+    document.getElementById("fairway-group");
+
+const scoreMinusButton =
+    document.getElementById("score-minus-button");
+
+const scorePlusButton =
+    document.getElementById("score-plus-button");
+
+const puttsMinusButton =
+    document.getElementById("putts-minus-button");
+
+const puttsPlusButton =
+    document.getElementById("putts-plus-button");
+
+const penaltiesMinusButton =
+    document.getElementById("penalties-minus-button");
+
+const penaltiesPlusButton =
+    document.getElementById("penalties-plus-button");
+
 const courses = {
     standard: {
         name: "Standard Par 72 Course",
@@ -69,6 +99,44 @@ startRoundButton.addEventListener("click", startRound);
 previousButton.addEventListener("click", goToPreviousHole);
 nextButton.addEventListener("click", saveHoleAndContinue);
 
+scoreMinusButton.addEventListener("click", function () {
+    changeNumberInput(scoreInput, -1, 1);
+});
+
+scorePlusButton.addEventListener("click", function () {
+    changeNumberInput(scoreInput, 1, 1);
+});
+
+puttsMinusButton.addEventListener("click", function () {
+    changeNumberInput(puttsInput, -1, 0);
+});
+
+puttsPlusButton.addEventListener("click", function () {
+    changeNumberInput(puttsInput, 1, 0);
+});
+
+penaltiesMinusButton.addEventListener("click", function () {
+    changeNumberInput(penaltiesInput, -1, 0);
+});
+
+penaltiesPlusButton.addEventListener("click", function () {
+    changeNumberInput(penaltiesInput, 1, 0);
+});
+
+function changeNumberInput(input, amount, minimum) {
+    let currentValue = Number(input.value);
+
+    if (input.value === "") {
+        currentValue = minimum;
+    }
+
+    const newValue = currentValue + amount;
+
+    if (newValue >= minimum) {
+        input.value = newValue;
+    }
+}
+
 function startRound() {
     const selectedCourseId = courseSelect.value;
 
@@ -98,10 +166,27 @@ function displayCurrentHole() {
     holeParText.textContent = currentHole.par;
     holeYardageText.textContent = currentHole.yardage;
 
-    scoreInput.value = currentResult.score ?? "";
-    puttsInput.value = currentResult.putts ?? "";
+    holeProgressText.textContent =
+    `Hole ${currentHole.number} of ${selectedCourse.holes.length}`;
+
+    courseNameText.textContent = selectedCourse.name;
+
+    const progressPercentage =
+        ((currentHoleIndex + 1) / selectedCourse.holes.length) * 100;
+
+    progressBar.style.width = `${progressPercentage}%`;
+
+    scoreInput.value = currentResult.score ?? currentHole.par;
+    puttsInput.value = currentResult.putts ?? 2;
     fairwayInput.value = currentResult.fairway;
     penaltiesInput.value = currentResult.penalties;
+
+    if (currentHole.par === 3) {
+    fairwayGroup.classList.add("hidden");
+    fairwayInput.value = "na";
+    } else {
+    fairwayGroup.classList.remove("hidden");
+    }   
 
     previousButton.disabled = currentHoleIndex === 0;
 
