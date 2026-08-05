@@ -27,7 +27,7 @@
 
             <select id="course-select">
                 <option value="standard">
-                    Standard Par 72 Course
+                    Default Par 72 Course
                 </option>
 
                 <option value="practice">
@@ -38,18 +38,26 @@
             <button id="start-round-button" type="button">
                 Start Round
             </button>
+
+            <button
+                id="resume-round-button"
+                class="secondary-button hidden"
+                type="button"
+            >
+                Resume Round
+            </button>
         </section>
 
         <section id="round-section" class="hidden">
             
-           <div class="progress-row">
-    <span id="hole-progress">Hole 1 of 18</span>
-    <span id="course-name"></span>
-</div>
+            <div class="progress-row">
+                <span id="hole-progress">Hole 1 of 18</span>
+                <span id="course-name"></span>
+            </div>
 
-<div class="progress-track">
-    <div id="progress-bar"></div>
-</div>
+            <div class="progress-track">
+                <div id="progress-bar"></div>
+            </div>
 
 <div class="round-status">
     <div>
@@ -81,9 +89,8 @@
         <button
             id="score-minus-button"
             class="number-button"
-            type="button"
-        >
-            −
+            type="button">
+            -
         </button>
 
         <input
@@ -95,8 +102,7 @@
         <button
             id="score-plus-button"
             class="number-button"
-            type="button"
-        >
+            type="button">
             +
         </button>
     </div>

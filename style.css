@@ -199,3 +199,14 @@ button:disabled {
 .number-button:hover {
     background-color: #166534;
 }
+
+.secondary-button {
+    width: 100%;
+    margin-top: 12px;
+    color: #1f2933;
+    background-color: #e5e7eb;
+}
+
+.secondary-button:hover {
+    background-color: #d1d5db;
+}

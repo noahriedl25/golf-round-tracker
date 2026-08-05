@@ -3,6 +3,7 @@ const roundSection = document.getElementById("round-section");
 
 const courseSelect = document.getElementById("course-select");
 const startRoundButton = document.getElementById("start-round-button");
+const resumeRoundButton = document.getElementById("resume-round-button");
 
 const holeNumberText = document.getElementById("hole-number");
 const holeParText = document.getElementById("hole-par");
@@ -24,29 +25,25 @@ const holeProgressText =
 const courseNameText =
     document.getElementById("course-name");
 
-const progressBar =
-    document.getElementById("progress-bar");
+const progressBar = document.getElementById("progress-bar");
 
-const fairwayGroup =
-    document.getElementById("fairway-group");
+const fairwayGroup = document.getElementById("fairway-group");
 
-const scoreMinusButton =
-    document.getElementById("score-minus-button");
+const scoreMinusButton = document.getElementById("score-minus-button");
 
-const scorePlusButton =
-    document.getElementById("score-plus-button");
+const scorePlusButton = document.getElementById("score-plus-button");
 
-const puttsMinusButton =
-    document.getElementById("putts-minus-button");
+const puttsMinusButton = document.getElementById("putts-minus-button");
 
-const puttsPlusButton =
-    document.getElementById("putts-plus-button");
+const puttsPlusButton = document.getElementById("putts-plus-button");
 
-const penaltiesMinusButton =
-    document.getElementById("penalties-minus-button");
+const penaltiesMinusButton = document.getElementById("penalties-minus-button");
 
-const penaltiesPlusButton =
-    document.getElementById("penalties-plus-button");
+const penaltiesPlusButton = document.getElementById("penalties-plus-button");
+
+const ACTIVE_ROUND_KEY = "golfTrackerActiveRound";
+
+
 
 const courses = {
     standard: {
@@ -98,6 +95,14 @@ let roundResults = [];
 startRoundButton.addEventListener("click", startRound);
 previousButton.addEventListener("click", goToPreviousHole);
 nextButton.addEventListener("click", saveHoleAndContinue);
+resumeRoundButton.addEventListener("click", resumeSavedRound);
+
+scoreInput.addEventListener("change", saveInputProgress);
+puttsInput.addEventListener("change", saveInputProgress);
+fairwayInput.addEventListener("change", saveInputProgress);
+penaltiesInput.addEventListener("change", saveInputProgress);
+
+checkForSavedRound();
 
 scoreMinusButton.addEventListener("click", function () {
     changeNumberInput(scoreInput, -1, 1);
@@ -134,10 +139,30 @@ function changeNumberInput(input, amount, minimum) {
 
     if (newValue >= minimum) {
         input.value = newValue;
+        saveInputProgress();
     }
 }
 
+function saveActiveRound() {
+    if (selectedCourse === null) {
+        return;
+    }
+
+    const activeRound = {
+        courseId: courseSelect.value,
+        currentHoleIndex: currentHoleIndex,
+        roundResults: roundResults
+    };
+
+    localStorage.setItem(
+        ACTIVE_ROUND_KEY,
+        JSON.stringify(activeRound)
+    );
+}
+
 function startRound() {
+    localStorage.removeItem(ACTIVE_ROUND_KEY);
+
     const selectedCourseId = courseSelect.value;
 
     selectedCourse = courses[selectedCourseId];
@@ -154,6 +179,8 @@ function startRound() {
 
     setupSection.classList.add("hidden");
     roundSection.classList.remove("hidden");
+
+    saveActiveRound();
 
     displayCurrentHole();
 }
@@ -234,7 +261,34 @@ function saveHoleAndContinue() {
     }
 
     currentHoleIndex++;
+    saveActiveRound();
     displayCurrentHole();
+}
+function saveCurrentHoleWithoutValidation() {
+    const currentHole = selectedCourse.holes[currentHoleIndex];
+
+    const score =
+        scoreInput.value === ""
+            ? null
+            : Number(scoreInput.value);
+
+    const putts =
+        puttsInput.value === ""
+            ? null
+            : Number(puttsInput.value);
+
+    roundResults[currentHoleIndex] = {
+        score: score,
+        putts: putts,
+        fairway:
+            currentHole.par === 3
+                ? "na"
+                : fairwayInput.value,
+        penalties:
+            penaltiesInput.value === ""
+                ? 0
+                : Number(penaltiesInput.value)
+    };
 }
 
 function goToPreviousHole() {
@@ -242,7 +296,79 @@ function goToPreviousHole() {
         return;
     }
 
+    saveCurrentHoleWithoutValidation();
+
     currentHoleIndex--;
+    saveActiveRound();
+    displayCurrentHole();
+}
+
+function saveInputProgress() {
+    if (selectedCourse === null) {
+        return;
+    }
+
+    saveCurrentHoleWithoutValidation();
+    saveActiveRound();
+    updateCurrentScore();
+}
+
+function checkForSavedRound() {
+    const savedRoundText =
+        localStorage.getItem(ACTIVE_ROUND_KEY);
+
+    if (savedRoundText !== null && getValidSavedRound(savedRoundText) !== null) {
+        resumeRoundButton.classList.remove("hidden");
+    }
+}
+
+function getValidSavedRound(savedRoundText) {
+    try {
+        const savedRound = JSON.parse(savedRoundText);
+        const course = courses[savedRound.courseId];
+
+        if (
+            course === undefined ||
+            !Number.isInteger(savedRound.currentHoleIndex) ||
+            savedRound.currentHoleIndex < 0 ||
+            savedRound.currentHoleIndex >= course.holes.length ||
+            !Array.isArray(savedRound.roundResults) ||
+            savedRound.roundResults.length !== course.holes.length
+        ) {
+            return null;
+        }
+
+        return savedRound;
+    } catch {
+        return null;
+    }
+}
+
+function resumeSavedRound() {
+    const savedRoundText =
+        localStorage.getItem(ACTIVE_ROUND_KEY);
+
+    if (savedRoundText === null) {
+        return;
+    }
+
+    const savedRound = getValidSavedRound(savedRoundText);
+
+    if (savedRound === null) {
+        localStorage.removeItem(ACTIVE_ROUND_KEY);
+        resumeRoundButton.classList.add("hidden");
+        return;
+    }
+
+    selectedCourse = courses[savedRound.courseId];
+    currentHoleIndex = savedRound.currentHoleIndex;
+    roundResults = savedRound.roundResults;
+
+    courseSelect.value = savedRound.courseId;
+
+    setupSection.classList.add("hidden");
+    roundSection.classList.remove("hidden");
+
     displayCurrentHole();
 }
 
@@ -271,6 +397,7 @@ function updateCurrentScore() {
 }
 
 function finishRound() {
+    localStorage.removeItem(ACTIVE_ROUND_KEY);
     let totalScore = 0;
     let totalPutts = 0;
     let totalPenalties = 0;
