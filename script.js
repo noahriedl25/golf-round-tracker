@@ -68,6 +68,14 @@ const penaltiesPlusButton = document.getElementById("penalties-plus-button");
 const ACTIVE_ROUND_KEY = "golfTrackerActiveRound";
 const ROUND_HISTORY_KEY = "golfTrackerRoundHistory";
 
+if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
+    window.addEventListener("load", function () {
+        navigator.serviceWorker.register("./service-worker.js").catch(function (error) {
+            console.error("Offline support could not be started.", error);
+        });
+    });
+}
+
 
 
 const courses = {
