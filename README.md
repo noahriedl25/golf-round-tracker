@@ -10,11 +10,11 @@ A web application that helps golfers analyze their rounds and identify where the
 - Save completed rounds and view hole-by-hole history
 - Review scoring, putting, fairway, penalty, and recent-form statistics
 - Install the tracker on a phone and use it offline
+- Search U.S. golf courses and automatically load available tee scorecards
+- Save searched courses on the device or create custom 9- and 18-hole courses
 
-## Planned Features
-
-- Analyze trends over time
-- Create custom courses and tee boxes
+Course and scorecard search data is provided by
+[OpenGolfAPI](https://opengolfapi.org/) under the ODbL 1.0 license.
 
 ## Built With
 

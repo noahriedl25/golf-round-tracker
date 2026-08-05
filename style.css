@@ -94,6 +94,136 @@ button:disabled {
     margin-top: 20px;
 }
 
+.course-search-form > label {
+    margin-bottom: 8px;
+}
+
+.search-control {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+}
+
+.course-search-message {
+    min-height: 20px;
+    margin: 9px 0;
+    color: #52606d;
+    font-size: 14px;
+}
+
+.course-search-results {
+    display: grid;
+    gap: 8px;
+    max-height: 270px;
+    overflow-y: auto;
+}
+
+.course-result {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    color: #1f2933;
+    text-align: left;
+    background-color: #f3f7f4;
+    border: 1px solid #d9e2ec;
+}
+
+.course-result:hover {
+    background-color: #dcfce7;
+}
+
+.course-result strong,
+.course-result span,
+.selected-course-card strong,
+.selected-course-card span {
+    display: block;
+}
+
+.course-result span,
+.selected-course-card span {
+    margin-top: 4px;
+    color: #52606d;
+    font-size: 13px;
+}
+
+.setup-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0;
+    color: #7b8794;
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.setup-divider::before,
+.setup-divider::after {
+    flex: 1;
+    height: 1px;
+    content: "";
+    background-color: #d9e2ec;
+}
+
+#tee-group {
+    margin-top: 16px;
+}
+
+.selected-course-card {
+    margin-top: 14px;
+    padding: 13px;
+    background-color: #dcfce7;
+    border-radius: 8px;
+}
+
+.data-attribution {
+    margin: 18px 0 0;
+    color: #7b8794;
+    font-size: 11px;
+    text-align: center;
+}
+
+.data-attribution a {
+    color: #166534;
+}
+
+.custom-course-fields {
+    margin-top: 22px;
+}
+
+.custom-hole-heading,
+.custom-hole-row {
+    display: grid;
+    grid-template-columns: 48px 1fr 1fr;
+    gap: 8px;
+    align-items: center;
+}
+
+.custom-hole-heading {
+    margin: 22px 0 8px;
+    color: #52606d;
+    font-size: 13px;
+    text-align: center;
+}
+
+.custom-hole-row {
+    margin-bottom: 8px;
+}
+
+.custom-hole-row input {
+    padding: 10px 8px;
+    text-align: center;
+}
+
+.hole-number-chip {
+    color: #14532d;
+    font-weight: bold;
+    text-align: center;
+}
+
+#save-custom-course-button {
+    width: 100%;
+}
+
 .round-status {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -157,6 +287,10 @@ button:disabled {
 
 @media (max-width: 400px) {
     .navigation-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .search-control {
         grid-template-columns: 1fr;
     }
 }

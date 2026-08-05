@@ -32,20 +32,55 @@
         <section id="setup-section">
             <h2>Start a Round</h2>
 
-            <label for="course-select">Course</label>
+            <form id="course-search-form" class="course-search-form">
+                <label for="course-search-input">Search U.S. Courses</label>
+
+                <div class="search-control">
+                    <input
+                        id="course-search-input"
+                        type="search"
+                        placeholder="Course name, city, or state"
+                        autocomplete="off"
+                    >
+
+                    <button id="course-search-button" type="submit">
+                        Search
+                    </button>
+                </div>
+            </form>
+
+            <p id="course-search-message" class="course-search-message"></p>
+            <div id="course-search-results" class="course-search-results"></div>
+
+            <div class="setup-divider"><span>or</span></div>
+
+            <label for="course-select">Saved Courses</label>
 
             <select id="course-select">
-                <option value="standard">
-                    Default Par 72 Course
-                </option>
-
-                <option value="practice">
-                    Practice Course
-                </option>
+                <option value="standard">Default Par 72 Course</option>
+                <option value="practice">Practice Course</option>
             </select>
+
+            <div id="tee-group" class="input-group hidden">
+                <label for="tee-select">Tee Box</label>
+                <select id="tee-select"></select>
+            </div>
+
+            <div id="selected-course-card" class="selected-course-card hidden">
+                <strong id="selected-course-name"></strong>
+                <span id="selected-course-details"></span>
+            </div>
 
             <button id="start-round-button" type="button">
                 Start Round
+            </button>
+
+            <button
+                id="add-custom-course-button"
+                class="secondary-button"
+                type="button"
+            >
+                Add Custom Course
             </button>
 
             <button
@@ -71,6 +106,14 @@
             >
                 Statistics
             </button>
+
+            <p class="data-attribution">
+                Course data ©
+                <a href="https://opengolfapi.org/" target="_blank" rel="noreferrer">
+                    OpenGolfAPI
+                </a>
+                · ODbL 1.0
+            </p>
         </section>
 
         <section id="history-section" class="hidden">
@@ -175,6 +218,62 @@
                     <div id="recent-results"></div>
                 </div>
             </div>
+        </section>
+
+        <section id="custom-course-section" class="hidden">
+            <div class="section-heading">
+                <div>
+                    <h2>Add Custom Course</h2>
+                    <p class="section-subtitle">Save a scorecard for offline use</p>
+                </div>
+
+                <button
+                    id="custom-course-back-button"
+                    class="small-secondary-button"
+                    type="button"
+                >
+                    Back
+                </button>
+            </div>
+
+            <form id="custom-course-form">
+                <div class="input-group custom-course-fields">
+                    <label for="custom-course-name">Course Name</label>
+                    <input id="custom-course-name" type="text" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="custom-tee-name">Tee Box</label>
+                    <input
+                        id="custom-tee-name"
+                        type="text"
+                        placeholder="Example: White"
+                        required
+                    >
+                </div>
+
+                <div class="input-group">
+                    <label for="custom-hole-count">Number of Holes</label>
+                    <select id="custom-hole-count">
+                        <option value="9">9 Holes</option>
+                        <option value="18">18 Holes</option>
+                    </select>
+                </div>
+
+                <div class="custom-hole-heading">
+                    <strong>Hole</strong>
+                    <strong>Par</strong>
+                    <strong>Yards</strong>
+                </div>
+
+                <div id="custom-hole-list"></div>
+
+                <p id="custom-course-message" class="message"></p>
+
+                <button id="save-custom-course-button" type="submit">
+                    Save Course
+                </button>
+            </form>
         </section>
 
         <section id="round-section" class="hidden">
