@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Golf Round Tracker</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main>
+        <h1>Golf Round Tracker</h1>
+
+        <p>Track your round and see where you are losing strokes.</p>
+
+        <section>
+            <h2>Hole 1</h2>
+
+            <label for="par">Par</label>
+            <input id="par" type="number" min="3" max="5">
+
+            <label for="score">Score</label>
+            <input id="score" type="number" min="1">
+
+            <label for="putts">Putts</label>
+            <input id="putts" type="number" min="0">
+
+            <button id="calculate-button" type="button">
+                Calculate Hole
+            </button>
+        </section>
+
+        <section>
+            <h2>Result</h2>
+            <p id="result">Enter your score to see the result.</p>
+        </section>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
