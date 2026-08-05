@@ -1,9 +1,15 @@
 const setupSection = document.getElementById("setup-section");
 const roundSection = document.getElementById("round-section");
+const historySection = document.getElementById("history-section");
 
 const courseSelect = document.getElementById("course-select");
 const startRoundButton = document.getElementById("start-round-button");
 const resumeRoundButton = document.getElementById("resume-round-button");
+const historyButton = document.getElementById("history-button");
+const historyBackButton = document.getElementById("history-back-button");
+const historyCountText = document.getElementById("history-count");
+const emptyHistoryMessage = document.getElementById("empty-history-message");
+const historyList = document.getElementById("history-list");
 
 const holeNumberText = document.getElementById("hole-number");
 const holeParText = document.getElementById("hole-par");
@@ -42,6 +48,7 @@ const penaltiesMinusButton = document.getElementById("penalties-minus-button");
 const penaltiesPlusButton = document.getElementById("penalties-plus-button");
 
 const ACTIVE_ROUND_KEY = "golfTrackerActiveRound";
+const ROUND_HISTORY_KEY = "golfTrackerRoundHistory";
 
 
 
@@ -96,6 +103,8 @@ startRoundButton.addEventListener("click", startRound);
 previousButton.addEventListener("click", goToPreviousHole);
 nextButton.addEventListener("click", saveHoleAndContinue);
 resumeRoundButton.addEventListener("click", resumeSavedRound);
+historyButton.addEventListener("click", showRoundHistory);
+historyBackButton.addEventListener("click", showSetup);
 
 scoreInput.addEventListener("change", saveInputProgress);
 puttsInput.addEventListener("change", saveInputProgress);
@@ -372,6 +381,197 @@ function resumeSavedRound() {
     displayCurrentHole();
 }
 
+function getRoundHistory() {
+    const savedHistoryText = localStorage.getItem(ROUND_HISTORY_KEY);
+
+    if (savedHistoryText === null) {
+        return [];
+    }
+
+    try {
+        const savedHistory = JSON.parse(savedHistoryText);
+        return Array.isArray(savedHistory)
+            ? savedHistory.filter(isValidCompletedRound)
+            : [];
+    } catch {
+        return [];
+    }
+}
+
+function isValidCompletedRound(round) {
+    return (
+        round !== null &&
+        typeof round === "object" &&
+        typeof round.courseName === "string" &&
+        typeof round.completedAt === "string" &&
+        Number.isFinite(round.totalScore) &&
+        Number.isFinite(round.scoreToPar) &&
+        Number.isFinite(round.totalPutts) &&
+        Number.isFinite(round.totalPenalties) &&
+        Number.isFinite(round.fairwayPercentage) &&
+        Array.isArray(round.holes)
+    );
+}
+
+function saveCompletedRound(round) {
+    const history = getRoundHistory();
+    history.unshift(round);
+    localStorage.setItem(ROUND_HISTORY_KEY, JSON.stringify(history));
+}
+
+function showRoundHistory() {
+    setupSection.classList.add("hidden");
+    roundSection.classList.add("hidden");
+    historySection.classList.remove("hidden");
+    renderRoundHistory();
+}
+
+function showSetup() {
+    historySection.classList.add("hidden");
+    roundSection.classList.add("hidden");
+    setupSection.classList.remove("hidden");
+}
+
+function renderRoundHistory() {
+    const history = getRoundHistory();
+
+    historyList.replaceChildren();
+    emptyHistoryMessage.classList.toggle("hidden", history.length !== 0);
+    historyCountText.textContent =
+        history.length === 1 ? "1 saved round" : `${history.length} saved rounds`;
+
+    history.forEach(function (round) {
+        historyList.append(createHistoryCard(round));
+    });
+}
+
+function createHistoryCard(round) {
+    const card = document.createElement("article");
+    card.className = "history-card";
+
+    const heading = document.createElement("div");
+    heading.className = "history-card-heading";
+
+    const courseDetails = document.createElement("div");
+    const courseName = document.createElement("h3");
+    const completedDate = document.createElement("p");
+    courseName.textContent = round.courseName;
+    completedDate.textContent = formatRoundDate(round.completedAt);
+    courseDetails.append(courseName, completedDate);
+
+    const score = document.createElement("div");
+    const scoreTotal = document.createElement("strong");
+    const scoreToPar = document.createElement("span");
+    score.className = "history-score";
+    scoreTotal.textContent = round.totalScore;
+    scoreToPar.textContent = formatScoreToPar(round.scoreToPar);
+    score.append(scoreTotal, scoreToPar);
+    heading.append(courseDetails, score);
+
+    const stats = document.createElement("div");
+    stats.className = "history-stats";
+    stats.append(
+        createStat("Putts", round.totalPutts),
+        createStat("Penalties", round.totalPenalties),
+        createStat("Fairways", `${round.fairwayPercentage}%`)
+    );
+
+    const scorecard = document.createElement("details");
+    const scorecardSummary = document.createElement("summary");
+    scorecardSummary.textContent = "View scorecard";
+    scorecard.append(scorecardSummary, createScorecard(round.holes));
+
+    card.append(heading, stats, scorecard);
+    return card;
+}
+
+function createStat(label, value) {
+    const stat = document.createElement("div");
+    const statLabel = document.createElement("span");
+    const statValue = document.createElement("strong");
+    statLabel.textContent = label;
+    statValue.textContent = value;
+    stat.append(statLabel, statValue);
+    return stat;
+}
+
+function createScorecard(holes) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "scorecard-wrapper";
+
+    const table = document.createElement("table");
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Hole</th>
+                <th>Par</th>
+                <th>Score</th>
+                <th>Putts</th>
+                <th>Fairway</th>
+                <th>Pen.</th>
+            </tr>
+        </thead>
+    `;
+
+    const tableBody = document.createElement("tbody");
+
+    holes.forEach(function (hole) {
+        const row = document.createElement("tr");
+        const values = [
+            hole.number,
+            hole.par,
+            hole.score,
+            hole.putts,
+            formatFairway(hole.fairway),
+            hole.penalties
+        ];
+
+        values.forEach(function (value) {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            row.append(cell);
+        });
+
+        tableBody.append(row);
+    });
+
+    table.append(tableBody);
+    wrapper.append(table);
+    return wrapper;
+}
+
+function formatRoundDate(dateText) {
+    const date = new Date(dateText);
+
+    if (Number.isNaN(date.getTime())) {
+        return "Date unavailable";
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short"
+    }).format(date);
+}
+
+function formatScoreToPar(scoreToPar) {
+    if (scoreToPar === 0) {
+        return "Even";
+    }
+
+    return scoreToPar > 0 ? `+${scoreToPar}` : String(scoreToPar);
+}
+
+function formatFairway(fairway) {
+    const labels = {
+        hit: "Hit",
+        left: "Left",
+        right: "Right",
+        na: "—"
+    };
+
+    return labels[fairway] ?? "—";
+}
+
 function updateCurrentScore() {
     let totalScore = 0;
     let totalPar = 0;
@@ -397,8 +597,8 @@ function updateCurrentScore() {
 }
 
 function finishRound() {
-    localStorage.removeItem(ACTIVE_ROUND_KEY);
     let totalScore = 0;
+    let totalPar = 0;
     let totalPutts = 0;
     let totalPenalties = 0;
     let fairwaysHit = 0;
@@ -409,6 +609,7 @@ function finishRound() {
         const hole = selectedCourse.holes[index];
 
         totalScore += result.score;
+        totalPar += hole.par;
         totalPutts += result.putts;
         totalPenalties += result.penalties;
 
@@ -422,13 +623,42 @@ function finishRound() {
     }
 
     const fairwayPercentage =
-        Math.round((fairwaysHit / fairwayOpportunities) * 100);
+        fairwayOpportunities === 0
+            ? 0
+            : Math.round((fairwaysHit / fairwayOpportunities) * 100);
+
+    const completedRound = {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        completedAt: new Date().toISOString(),
+        courseId: courseSelect.value,
+        courseName: selectedCourse.name,
+        totalScore: totalScore,
+        totalPar: totalPar,
+        scoreToPar: totalScore - totalPar,
+        totalPutts: totalPutts,
+        totalPenalties: totalPenalties,
+        fairwaysHit: fairwaysHit,
+        fairwayOpportunities: fairwayOpportunities,
+        fairwayPercentage: fairwayPercentage,
+        holes: selectedCourse.holes.map(function (hole, index) {
+            return {
+                number: hole.number,
+                par: hole.par,
+                yardage: hole.yardage,
+                ...roundResults[index]
+            };
+        })
+    };
+
+    saveCompletedRound(completedRound);
+    localStorage.removeItem(ACTIVE_ROUND_KEY);
 
     roundSection.innerHTML = `
         <h2>Round Complete</h2>
 
         <p>
-            You shot <strong>${totalScore}</strong>.
+            You shot <strong>${totalScore}</strong>
+            (${formatScoreToPar(totalScore - totalPar)}).
         </p>
 
         <p>
@@ -452,12 +682,24 @@ function finishRound() {
         <button id="new-round-button" type="button">
             Start Another Round
         </button>
+
+        <button
+            id="summary-history-button"
+            class="secondary-button"
+            type="button"
+        >
+            View Round History
+        </button>
     `;
 
     const newRoundButton =
         document.getElementById("new-round-button");
+    const summaryHistoryButton =
+        document.getElementById("summary-history-button");
 
     newRoundButton.addEventListener("click", function () {
         window.location.reload();
     });
+
+    summaryHistoryButton.addEventListener("click", showRoundHistory);
 }

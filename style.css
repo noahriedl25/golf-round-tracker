@@ -210,3 +210,122 @@ button:disabled {
 .secondary-button:hover {
     background-color: #d1d5db;
 }
+
+.section-heading,
+.history-card-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.section-heading h2,
+.history-card h3 {
+    margin: 0;
+}
+
+.section-subtitle,
+.history-card-heading p {
+    margin: 5px 0 0;
+    color: #52606d;
+    font-size: 14px;
+}
+
+.small-secondary-button {
+    padding: 9px 14px;
+    color: #1f2933;
+    background-color: #e5e7eb;
+}
+
+.small-secondary-button:hover {
+    background-color: #d1d5db;
+}
+
+.empty-state {
+    margin: 22px 0 0;
+    padding: 22px;
+    color: #52606d;
+    text-align: center;
+    background-color: #f3f7f4;
+    border-radius: 10px;
+}
+
+.history-card {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid #d9e2ec;
+}
+
+.history-score {
+    min-width: 58px;
+    text-align: right;
+}
+
+.history-score strong,
+.history-score span {
+    display: block;
+}
+
+.history-score strong {
+    color: #14532d;
+    font-size: 26px;
+}
+
+.history-score span {
+    color: #52606d;
+    font-size: 14px;
+}
+
+.history-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.history-stats div {
+    padding: 10px 6px;
+    text-align: center;
+    background-color: #f3f7f4;
+    border-radius: 8px;
+}
+
+.history-stats span,
+.history-stats strong {
+    display: block;
+}
+
+.history-stats span {
+    margin-bottom: 3px;
+    color: #52606d;
+    font-size: 12px;
+}
+
+.history-card summary {
+    color: #166534;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.scorecard-wrapper {
+    margin-top: 12px;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th,
+td {
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+th {
+    color: #52606d;
+    font-size: 12px;
+}

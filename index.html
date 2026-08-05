@@ -46,6 +46,37 @@
             >
                 Resume Round
             </button>
+
+            <button
+                id="history-button"
+                class="secondary-button"
+                type="button"
+            >
+                Round History
+            </button>
+        </section>
+
+        <section id="history-section" class="hidden">
+            <div class="section-heading">
+                <div>
+                    <h2>Round History</h2>
+                    <p id="history-count" class="section-subtitle"></p>
+                </div>
+
+                <button
+                    id="history-back-button"
+                    class="small-secondary-button"
+                    type="button"
+                >
+                    Back
+                </button>
+            </div>
+
+            <p id="empty-history-message" class="empty-state hidden">
+                Finish your first round to see it here.
+            </p>
+
+            <div id="history-list"></div>
         </section>
 
         <section id="round-section" class="hidden">
