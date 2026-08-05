@@ -5,69 +5,71 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background-color: #f2f5f2;
+    background-color: #eef3ef;
     color: #1f2933;
 }
 
 main {
-    width: 90%;
-    max-width: 600px;
-    margin: 40px auto;
+    width: 92%;
+    max-width: 520px;
+    margin: 30px auto;
 }
 
-h1 {
-    margin-bottom: 8px;
+.app-header {
+    margin-bottom: 24px;
+}
+
+.app-header h1 {
+    margin-bottom: 6px;
     color: #14532d;
 }
 
-main > p {
+.app-header p {
     margin-top: 0;
-    margin-bottom: 30px;
     color: #52606d;
 }
 
 section {
-    margin-bottom: 24px;
-    padding: 24px;
+    padding: 22px;
     background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 }
 
-h2 {
-    margin-top: 0;
+.hidden {
+    display: none;
 }
 
 label {
     display: block;
-    margin-top: 16px;
-    margin-bottom: 6px;
+    margin-bottom: 7px;
     font-weight: bold;
 }
 
-input {
+input,
+select {
     width: 100%;
-    padding: 10px;
+    padding: 12px;
     font-size: 16px;
+    background-color: white;
     border: 1px solid #bcccdc;
-    border-radius: 6px;
+    border-radius: 8px;
 }
 
-input:focus {
+input:focus,
+select:focus {
     outline: 2px solid #16a34a;
     border-color: #16a34a;
 }
 
 button {
-    width: 100%;
-    margin-top: 22px;
     padding: 12px;
     font-size: 16px;
     font-weight: bold;
     color: white;
     background-color: #15803d;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
 }
 
@@ -75,37 +77,79 @@ button:hover {
     background-color: #166534;
 }
 
-#result {
-    margin-bottom: 0;
-    font-size: 18px;
-    font-weight: bold;
+button:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
 }
 
-#holes-container {
+#start-round-button {
+    width: 100%;
+    margin-top: 20px;
+}
+
+.round-status {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+    text-align: center;
 }
 
-.hole {
-    padding: 16px;
-    background-color: #f8faf8;
-    border: 1px solid #d8e2dc;
+.round-status div {
+    padding: 12px 6px;
+    background-color: #f3f7f4;
     border-radius: 8px;
 }
 
-.hole h3 {
-    margin-top: 0;
-    margin-bottom: 12px;
+.status-label {
+    display: block;
+    margin-bottom: 4px;
+    color: #52606d;
+    font-size: 13px;
+}
+
+.round-status strong {
+    font-size: 20px;
     color: #14532d;
 }
 
-.hole label {
-    margin-top: 10px;
+.score-summary {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    padding: 14px;
+    background-color: #dcfce7;
+    border-radius: 8px;
 }
 
-@media (max-width: 600px) {
-    #holes-container {
+.input-group {
+    margin-bottom: 18px;
+}
+
+.message {
+    min-height: 20px;
+    margin-bottom: 16px;
+    color: #b91c1c;
+    font-weight: bold;
+}
+
+.navigation-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+#previous-button {
+    color: #1f2933;
+    background-color: #e5e7eb;
+}
+
+#previous-button:hover {
+    background-color: #d1d5db;
+}
+
+@media (max-width: 400px) {
+    .navigation-buttons {
         grid-template-columns: 1fr;
     }
 }

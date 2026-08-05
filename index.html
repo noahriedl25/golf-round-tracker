@@ -2,30 +2,121 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>Golf Round Tracker</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <main>
-        <h1>Golf Round Tracker</h1>
+        <header class="app-header">
+            <h1>Golf Round Tracker</h1>
+            <p>Track your round one hole at a time.</p>
+        </header>
 
-        <p>Track your round and see where you are losing strokes.</p>
+        <section id="setup-section">
+            <h2>Start a Round</h2>
 
-        <section>
-            <h2>Round</h2>
-            <div id="holes-container"></div>
+            <label for="course-select">Course</label>
 
-            <button id="calculate-button" type="button">
-                Calculate Round
+            <select id="course-select">
+                <option value="standard">
+                    Standard Par 72 Course
+                </option>
+
+                <option value="practice">
+                    Practice Course
+                </option>
+            </select>
+
+            <button id="start-round-button" type="button">
+                Start Round
             </button>
         </section>
 
-        <section>
-            <h2>Result</h2>
-            <p id="result">Enter your score to see the result.</p>
+        <section id="round-section" class="hidden">
+            <div class="round-status">
+                <div>
+                    <span class="status-label">Hole</span>
+                    <strong id="hole-number">1</strong>
+                </div>
+
+                <div>
+                    <span class="status-label">Par</span>
+                    <strong id="hole-par">4</strong>
+                </div>
+
+                <div>
+                    <span class="status-label">Yards</span>
+                    <strong id="hole-yardage">375</strong>
+                </div>
+            </div>
+
+            <div class="score-summary">
+                <span>Current Score</span>
+                <strong id="current-score">Even</strong>
+            </div>
+
+            <div class="input-group">
+                <label for="score-input">Score</label>
+                <input
+                    id="score-input"
+                    type="number"
+                    min="1"
+                >
+            </div>
+
+            <div class="input-group">
+                <label for="putts-input">Putts</label>
+                <input
+                    id="putts-input"
+                    type="number"
+                    min="0"
+                >
+            </div>
+
+            <div class="input-group">
+                <label for="fairway-input">Fairway</label>
+
+                <select id="fairway-input">
+                    <option value="">Select result</option>
+                    <option value="hit">Hit</option>
+                    <option value="left">Missed Left</option>
+                    <option value="right">Missed Right</option>
+                    <option value="na">Not Applicable</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="penalties-input">
+                    Penalty Strokes
+                </label>
+
+                <input
+                    id="penalties-input"
+                    type="number"
+                    min="0"
+                    value="0"
+                >
+            </div>
+
+            <p id="message" class="message"></p>
+
+            <div class="navigation-buttons">
+                <button id="previous-button" type="button">
+                    Previous
+                </button>
+
+                <button id="next-button" type="button">
+                    Save & Next
+                </button>
+            </div>
         </section>
     </main>
 
