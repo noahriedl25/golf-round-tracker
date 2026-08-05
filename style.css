@@ -80,3 +80,32 @@ button:hover {
     font-size: 18px;
     font-weight: bold;
 }
+
+#holes-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.hole {
+    padding: 16px;
+    background-color: #f8faf8;
+    border: 1px solid #d8e2dc;
+    border-radius: 8px;
+}
+
+.hole h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    color: #14532d;
+}
+
+.hole label {
+    margin-top: 10px;
+}
+
+@media (max-width: 600px) {
+    #holes-container {
+        grid-template-columns: 1fr;
+    }
+}

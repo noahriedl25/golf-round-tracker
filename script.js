@@ -1,38 +1,84 @@
-const parInput = document.getElementById("par");
-const scoreInput = document.getElementById("score");
-const puttsInput = document.getElementById("putts");
+const holesContainer = document.getElementById("holes-container");
 const calculateButton = document.getElementById("calculate-button");
 const resultText = document.getElementById("result");
 
-calculateButton.addEventListener("click", calculateHole);
+createHoleInputs();
 
-function calculateHole() {
-    const par = Number(parInput.value);
-    const score = Number(scoreInput.value);
-    const putts = Number(puttsInput.value);
+calculateButton.addEventListener("click", calculateRound);
 
-    if (par === 0 || score === 0 || puttsInput.value === "") {
-        resultText.textContent = "Please fill in every field.";
-        return;
+function createHoleInputs() {
+    for (let holeNumber = 1; holeNumber <= 18; holeNumber++) {
+        const holeDiv = document.createElement("div");
+        holeDiv.classList.add("hole");
+
+        holeDiv.innerHTML = `
+            <h3>Hole ${holeNumber}</h3>
+
+            <label for="par-${holeNumber}">Par</label>
+            <input
+                id="par-${holeNumber}"
+                class="par-input"
+                type="number"
+                min="3"
+                max="5"
+            >
+
+            <label for="score-${holeNumber}">Score</label>
+            <input
+                id="score-${holeNumber}"
+                class="score-input"
+                type="number"
+                min="1"
+            >
+
+            <label for="putts-${holeNumber}">Putts</label>
+            <input
+                id="putts-${holeNumber}"
+                class="putts-input"
+                type="number"
+                min="0"
+            >
+        `;
+
+        holesContainer.appendChild(holeDiv);
+    }
+}
+
+function calculateRound() {
+    const parInputs = document.querySelectorAll(".par-input");
+    const scoreInputs = document.querySelectorAll(".score-input");
+    const puttsInputs = document.querySelectorAll(".putts-input");
+
+    let totalPar = 0;
+    let totalScore = 0;
+    let totalPutts = 0;
+
+    for (let index = 0; index < 18; index++) {
+        if (
+            parInputs[index].value === "" ||
+            scoreInputs[index].value === "" ||
+            puttsInputs[index].value === ""
+        ) {
+            resultText.textContent = "Please fill in every field.";
+            return;
+        }
+
+        totalPar += Number(parInputs[index].value);
+        totalScore += Number(scoreInputs[index].value);
+        totalPutts += Number(puttsInputs[index].value);
     }
 
-    const scoreDifference = score - par;
-    let scoreName;
+    const scoreDifference = totalScore - totalPar;
+    let scoreToPar;
 
-    if (scoreDifference <= -2) {
-        scoreName = "Eagle or better";
-    } else if (scoreDifference === -1) {
-        scoreName = "Birdie";
-    } else if (scoreDifference === 0) {
-        scoreName = "Par";
-    } else if (scoreDifference === 1) {
-        scoreName = "Bogey";
-    } else if (scoreDifference === 2) {
-        scoreName = "Double bogey";
+    if (scoreDifference === 0) {
+        scoreToPar = "even par";
+    } else if (scoreDifference > 0) {
+        scoreToPar = `+${scoreDifference}`;
     } else {
-        scoreName = `${scoreDifference} over par`;
+        scoreToPar = `${scoreDifference}`;
     }
 
     resultText.textContent =
-        `${scoreName}. You scored ${score} on a par ${par} with ${putts} putts.`;
+        `You shot ${totalScore} (${scoreToPar}) with ${totalPutts} putts.`;
 }
