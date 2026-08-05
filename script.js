@@ -1,6 +1,7 @@
 const setupSection = document.getElementById("setup-section");
 const roundSection = document.getElementById("round-section");
 const historySection = document.getElementById("history-section");
+const statisticsSection = document.getElementById("statistics-section");
 
 const courseSelect = document.getElementById("course-select");
 const startRoundButton = document.getElementById("start-round-button");
@@ -10,6 +11,23 @@ const historyBackButton = document.getElementById("history-back-button");
 const historyCountText = document.getElementById("history-count");
 const emptyHistoryMessage = document.getElementById("empty-history-message");
 const historyList = document.getElementById("history-list");
+const statisticsButton = document.getElementById("statistics-button");
+const statisticsBackButton = document.getElementById("statistics-back-button");
+const emptyStatisticsMessage = document.getElementById("empty-statistics-message");
+const statisticsContent = document.getElementById("statistics-content");
+const totalRoundsStat = document.getElementById("total-rounds-stat");
+const averageScoreStat = document.getElementById("average-score-stat");
+const averageToParStat = document.getElementById("average-to-par-stat");
+const averagePuttsStat = document.getElementById("average-putts-stat");
+const fairwaysStat = document.getElementById("fairways-stat");
+const penaltiesStat = document.getElementById("penalties-stat");
+const bestRoundCourse = document.getElementById("best-round-course");
+const bestRoundDate = document.getElementById("best-round-date");
+const bestRoundTotal = document.getElementById("best-round-total");
+const bestRoundToPar = document.getElementById("best-round-to-par");
+const holeTypeStats = document.getElementById("hole-type-stats");
+const trendSummary = document.getElementById("trend-summary");
+const recentResults = document.getElementById("recent-results");
 
 const holeNumberText = document.getElementById("hole-number");
 const holeParText = document.getElementById("hole-par");
@@ -105,6 +123,8 @@ nextButton.addEventListener("click", saveHoleAndContinue);
 resumeRoundButton.addEventListener("click", resumeSavedRound);
 historyButton.addEventListener("click", showRoundHistory);
 historyBackButton.addEventListener("click", showSetup);
+statisticsButton.addEventListener("click", showStatistics);
+statisticsBackButton.addEventListener("click", showSetup);
 
 scoreInput.addEventListener("change", saveInputProgress);
 puttsInput.addEventListener("change", saveInputProgress);
@@ -408,8 +428,20 @@ function isValidCompletedRound(round) {
         Number.isFinite(round.scoreToPar) &&
         Number.isFinite(round.totalPutts) &&
         Number.isFinite(round.totalPenalties) &&
+        Number.isFinite(round.fairwaysHit) &&
+        Number.isFinite(round.fairwayOpportunities) &&
         Number.isFinite(round.fairwayPercentage) &&
-        Array.isArray(round.holes)
+        Array.isArray(round.holes) &&
+        round.holes.length > 0 &&
+        round.holes.every(function (hole) {
+            return (
+                Number.isFinite(hole.number) &&
+                Number.isFinite(hole.par) &&
+                Number.isFinite(hole.score) &&
+                Number.isFinite(hole.putts) &&
+                Number.isFinite(hole.penalties)
+            );
+        })
     );
 }
 
@@ -421,6 +453,7 @@ function saveCompletedRound(round) {
 
 function showRoundHistory() {
     setupSection.classList.add("hidden");
+    statisticsSection.classList.add("hidden");
     roundSection.classList.add("hidden");
     historySection.classList.remove("hidden");
     renderRoundHistory();
@@ -428,8 +461,248 @@ function showRoundHistory() {
 
 function showSetup() {
     historySection.classList.add("hidden");
+    statisticsSection.classList.add("hidden");
     roundSection.classList.add("hidden");
     setupSection.classList.remove("hidden");
+}
+
+function showStatistics() {
+    setupSection.classList.add("hidden");
+    historySection.classList.add("hidden");
+    roundSection.classList.add("hidden");
+    statisticsSection.classList.remove("hidden");
+    renderStatistics();
+}
+
+function renderStatistics() {
+    const history = getRoundHistory();
+    const hasRounds = history.length > 0;
+
+    emptyStatisticsMessage.classList.toggle("hidden", hasRounds);
+    statisticsContent.classList.toggle("hidden", !hasRounds);
+
+    if (!hasRounds) {
+        return;
+    }
+
+    const statistics = calculateStatistics(history);
+
+    totalRoundsStat.textContent = statistics.totalRounds;
+    averageScoreStat.textContent = formatGroupedAverage(
+        statistics.roundLengths,
+        "totalScore"
+    );
+    averageToParStat.textContent = formatGroupedAverage(
+        statistics.roundLengths,
+        "scoreToPar",
+        true
+    );
+    averagePuttsStat.textContent = formatGroupedAverage(
+        statistics.roundLengths,
+        "totalPutts"
+    );
+    fairwaysStat.textContent = `${statistics.fairwayPercentage}%`;
+    penaltiesStat.textContent = formatGroupedAverage(
+        statistics.roundLengths,
+        "totalPenalties"
+    );
+
+    bestRoundCourse.textContent = statistics.bestRound.courseName;
+    bestRoundDate.textContent =
+        `${formatRoundDate(statistics.bestRound.completedAt)} · ` +
+        `${statistics.bestRound.holes.length} holes`;
+    bestRoundTotal.textContent = statistics.bestRound.totalScore;
+    bestRoundToPar.textContent = formatScoreToPar(statistics.bestRound.scoreToPar);
+
+    renderHoleTypeStatistics(statistics.holeTypes);
+    renderRecentResults(history.slice(0, 5));
+}
+
+function calculateStatistics(history) {
+    let totalScore = 0;
+    let totalToPar = 0;
+    let totalPutts = 0;
+    let totalPenalties = 0;
+    let fairwaysHit = 0;
+    let fairwayOpportunities = 0;
+    const roundLengths = {};
+    const holeTypes = {
+        3: { strokes: 0, holes: 0 },
+        4: { strokes: 0, holes: 0 },
+        5: { strokes: 0, holes: 0 }
+    };
+
+    history.forEach(function (round) {
+        const holeCount = round.holes.length;
+
+        totalScore += round.totalScore;
+        totalToPar += round.scoreToPar;
+        totalPutts += round.totalPutts;
+        totalPenalties += round.totalPenalties;
+        fairwaysHit += round.fairwaysHit;
+        fairwayOpportunities += round.fairwayOpportunities;
+
+        if (roundLengths[holeCount] === undefined) {
+            roundLengths[holeCount] = {
+                rounds: 0,
+                totalScore: 0,
+                scoreToPar: 0,
+                totalPutts: 0,
+                totalPenalties: 0
+            };
+        }
+
+        roundLengths[holeCount].rounds++;
+        roundLengths[holeCount].totalScore += round.totalScore;
+        roundLengths[holeCount].scoreToPar += round.scoreToPar;
+        roundLengths[holeCount].totalPutts += round.totalPutts;
+        roundLengths[holeCount].totalPenalties += round.totalPenalties;
+
+        round.holes.forEach(function (hole) {
+            if (holeTypes[hole.par] !== undefined && Number.isFinite(hole.score)) {
+                holeTypes[hole.par].strokes += hole.score;
+                holeTypes[hole.par].holes++;
+            }
+        });
+    });
+
+    const bestRound = history.reduce(function (best, round) {
+        const roundRate = round.scoreToPar / round.holes.length;
+        const bestRate = best.scoreToPar / best.holes.length;
+
+        if (roundRate < bestRate) {
+            return round;
+        }
+
+        if (
+            roundRate === bestRate &&
+            round.totalScore < best.totalScore
+        ) {
+            return round;
+        }
+
+        return best;
+    });
+
+    return {
+        totalRounds: history.length,
+        averageScore: totalScore / history.length,
+        averageToPar: totalToPar / history.length,
+        averagePutts: totalPutts / history.length,
+        averagePenalties: totalPenalties / history.length,
+        fairwayPercentage:
+            fairwayOpportunities === 0
+                ? 0
+                : Math.round((fairwaysHit / fairwayOpportunities) * 100),
+        bestRound: bestRound,
+        roundLengths: roundLengths,
+        holeTypes: holeTypes
+    };
+}
+
+function renderHoleTypeStatistics(holeTypes) {
+    holeTypeStats.replaceChildren();
+
+    [3, 4, 5].forEach(function (par) {
+        const result = holeTypes[par];
+        const card = document.createElement("div");
+        const label = document.createElement("span");
+        const value = document.createElement("strong");
+        const comparison = document.createElement("small");
+
+        label.textContent = `Par ${par}`;
+
+        if (result.holes === 0) {
+            value.textContent = "—";
+            comparison.textContent = "No holes";
+        } else {
+            const average = result.strokes / result.holes;
+            value.textContent = formatAverage(average);
+            comparison.textContent = `${formatAverageToPar(average - par)} avg`;
+        }
+
+        card.append(label, value, comparison);
+        holeTypeStats.append(card);
+    });
+}
+
+function renderRecentResults(recentRounds) {
+    recentResults.replaceChildren();
+
+    const chronologicalRounds = [...recentRounds].reverse();
+    const oldestRound = chronologicalRounds[0];
+    const newestRound = chronologicalRounds[chronologicalRounds.length - 1];
+    const hasMixedLengths = chronologicalRounds.some(function (round) {
+        return round.holes.length !== oldestRound.holes.length;
+    });
+
+    if (chronologicalRounds.length === 1) {
+        trendSummary.textContent = "Complete another round to see your trend.";
+    } else if (hasMixedLengths) {
+        trendSummary.textContent =
+            "Different round lengths are shown separately for a fair comparison.";
+    } else {
+        const change = newestRound.scoreToPar - oldestRound.scoreToPar;
+
+        if (change < 0) {
+            trendSummary.textContent = `Improved by ${Math.abs(change)} strokes across these rounds.`;
+        } else if (change > 0) {
+            trendSummary.textContent = `${change} strokes higher than the first round shown.`;
+        } else {
+            trendSummary.textContent = "Your score to par is unchanged across these rounds.";
+        }
+    }
+
+    chronologicalRounds.forEach(function (round) {
+        const row = document.createElement("div");
+        const details = document.createElement("div");
+        const course = document.createElement("strong");
+        const date = document.createElement("span");
+        const score = document.createElement("strong");
+
+        row.className = "recent-result";
+        course.textContent = round.courseName;
+        date.textContent = formatRoundDate(round.completedAt);
+        score.className = "recent-result-score";
+        score.textContent =
+            `${formatScoreToPar(round.scoreToPar)} · ${round.holes.length}H`;
+
+        details.append(course, date);
+        row.append(details, score);
+        recentResults.append(row);
+    });
+}
+
+function formatAverage(value) {
+    return value.toFixed(1);
+}
+
+function formatGroupedAverage(roundLengths, property, formatToPar = false) {
+    return Object.keys(roundLengths)
+        .map(Number)
+        .sort(function (first, second) {
+            return first - second;
+        })
+        .map(function (holeCount) {
+            const group = roundLengths[holeCount];
+            const average = group[property] / group.rounds;
+            const formattedAverage = formatToPar
+                ? formatAverageToPar(average)
+                : formatAverage(average);
+
+            return `${formattedAverage} (${holeCount}H)`;
+        })
+        .join("\n");
+}
+
+function formatAverageToPar(value) {
+    const roundedValue = Math.round(value * 10) / 10;
+
+    if (roundedValue === 0) {
+        return "Even";
+    }
+
+    return roundedValue > 0 ? `+${roundedValue}` : String(roundedValue);
 }
 
 function renderRoundHistory() {

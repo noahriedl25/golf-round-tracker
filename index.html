@@ -54,6 +54,14 @@
             >
                 Round History
             </button>
+
+            <button
+                id="statistics-button"
+                class="secondary-button"
+                type="button"
+            >
+                Statistics
+            </button>
         </section>
 
         <section id="history-section" class="hidden">
@@ -77,6 +85,87 @@
             </p>
 
             <div id="history-list"></div>
+        </section>
+
+        <section id="statistics-section" class="hidden">
+            <div class="section-heading">
+                <div>
+                    <h2>Statistics</h2>
+                    <p class="section-subtitle">Your performance across saved rounds</p>
+                </div>
+
+                <button
+                    id="statistics-back-button"
+                    class="small-secondary-button"
+                    type="button"
+                >
+                    Back
+                </button>
+            </div>
+
+            <p id="empty-statistics-message" class="empty-state hidden">
+                Complete a round to start building your statistics.
+            </p>
+
+            <div id="statistics-content" class="hidden">
+                <div class="statistics-grid">
+                    <div class="statistic-card">
+                        <span>Rounds</span>
+                        <strong id="total-rounds-stat">0</strong>
+                    </div>
+
+                    <div class="statistic-card">
+                        <span>Average Score</span>
+                        <strong id="average-score-stat">—</strong>
+                    </div>
+
+                    <div class="statistic-card">
+                        <span>Average to Par</span>
+                        <strong id="average-to-par-stat">—</strong>
+                    </div>
+
+                    <div class="statistic-card">
+                        <span>Average Putts</span>
+                        <strong id="average-putts-stat">—</strong>
+                    </div>
+
+                    <div class="statistic-card">
+                        <span>Fairways Hit</span>
+                        <strong id="fairways-stat">—</strong>
+                    </div>
+
+                    <div class="statistic-card">
+                        <span>Penalties / Round</span>
+                        <strong id="penalties-stat">—</strong>
+                    </div>
+                </div>
+
+                <div class="statistics-panel">
+                    <h3>Best Round</h3>
+                    <div class="best-round-row">
+                        <div>
+                            <strong id="best-round-course"></strong>
+                            <span id="best-round-date"></span>
+                        </div>
+
+                        <div class="best-round-score">
+                            <strong id="best-round-total"></strong>
+                            <span id="best-round-to-par"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="statistics-panel">
+                    <h3>Scoring by Hole Type</h3>
+                    <div id="hole-type-stats" class="hole-type-stats"></div>
+                </div>
+
+                <div class="statistics-panel">
+                    <h3>Recent Form</h3>
+                    <p id="trend-summary" class="trend-summary"></p>
+                    <div id="recent-results"></div>
+                </div>
+            </div>
         </section>
 
         <section id="round-section" class="hidden">
