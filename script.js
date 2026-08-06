@@ -106,6 +106,7 @@ const SAVED_COURSES_KEY = "golfTrackerSavedCourses";
 const FAVORITE_COURSES_KEY = "golfTrackerFavoriteCourses";
 const COURSE_SEARCH_URL = "https://api.opengolfapi.org/v1/courses/search";
 const COURSE_DETAIL_URL = "https://api.opengolfapi.org/api/v1/courses";
+const HON_E_KOR_API_ID = "a85a271e-6abd-4fab-8ed6-9b96c6fe9cb9";
 const US_STATE_CODES = new Set([
     "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
     "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
@@ -114,6 +115,54 @@ const US_STATE_CODES = new Set([
     "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
     "DC"
 ]);
+
+const HON_E_KOR_NINE_DATA = [
+    {
+        id: "red",
+        name: "Red Nine",
+        holes: [
+            { par: 4, blue: 287, white: 303, red: 296 },
+            { par: 4, blue: 351, white: 341, red: 334 },
+            { par: 4, blue: 311, white: 288, red: 278 },
+            { par: 4, blue: 460, white: 433, red: 314 },
+            { par: 3, blue: 180, white: 129, red: 120 },
+            { par: 4, blue: 332, white: 305, red: 278 },
+            { par: 3, blue: 205, white: 196, red: 190 },
+            { par: 4, blue: 395, white: 337, red: 329 },
+            { par: 5, blue: 556, white: 543, red: 432 }
+        ]
+    },
+    {
+        id: "white",
+        name: "White Nine",
+        holes: [
+            { par: 4, blue: 332, white: 332, red: 316 },
+            { par: 4, blue: 383, white: 337, red: 327 },
+            { par: 3, blue: 164, white: 164, red: 144 },
+            { par: 5, blue: 493, white: 493, red: 428 },
+            { par: 4, blue: 414, white: 414, red: 366 },
+            { par: 4, blue: 355, white: 329, red: 322 },
+            { par: 3, blue: 175, white: 175, red: 130 },
+            { par: 4, blue: 326, white: 311, red: 274 },
+            { par: 4, blue: 402, white: 360, red: 331 }
+        ]
+    },
+    {
+        id: "blue",
+        name: "Blue Nine",
+        holes: [
+            { par: 4, blue: 365, white: 365, red: 350 },
+            { par: 4, blue: 403, white: 403, red: 291 },
+            { par: 5, blue: 534, white: 507, red: 437 },
+            { par: 3, blue: 150, white: 150, red: 141 },
+            { par: 3, blue: 204, white: 169, red: 130 },
+            { par: 4, blue: 453, white: 401, red: 306 },
+            { par: 4, blue: 348, white: 348, red: 321 },
+            { par: 4, blue: 314, white: 314, red: 302 },
+            { par: 4, blue: 325, white: 325, red: 309 }
+        ]
+    }
+];
 
 if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
     window.addEventListener("load", function () {
@@ -171,8 +220,42 @@ const courses = {
             { number: 8, par: 4, yardage: 350 },
             { number: 9, par: 4, yardage: 370 }
         ]
-    }
+    },
+    "honekor:blue": createHonEKorCourse("blue"),
+    "honekor:white": createHonEKorCourse("white"),
+    "honekor:red": createHonEKorCourse("red")
 };
+
+function createHonEKorCourse(teeKey) {
+    const nines = HON_E_KOR_NINE_DATA.map(function (nine) {
+        return {
+            id: nine.id,
+            name: nine.name,
+            holes: nine.holes.map(function (hole, index) {
+                return {
+                    number: index + 1,
+                    par: hole.par,
+                    yardage: hole[teeKey]
+                };
+            })
+        };
+    });
+
+    return {
+        id: `honekor:${teeKey}`,
+        externalId: HON_E_KOR_API_ID,
+        name: "Hon-E-Kor Country Club",
+        teeName: `${teeKey[0].toUpperCase()}${teeKey.slice(1)} Tee`,
+        location: "Kewaskum, WI",
+        latitude: 43.515106,
+        longitude: -88.2144325,
+        source: "verified",
+        nines: nines,
+        holes: nines.flatMap(function (nine) {
+            return nine.holes;
+        })
+    };
+}
 
 let selectedCourse = null;
 let currentHoleIndex = 0;
@@ -214,6 +297,9 @@ puttsInput.addEventListener("change", saveInputProgress);
 fairwayInput.addEventListener("change", saveInputProgress);
 penaltiesInput.addEventListener("change", saveInputProgress);
 
+["honekor:blue", "honekor:white", "honekor:red"].forEach(function (courseId) {
+    addCourseOption(courses[courseId]);
+});
 loadSavedCourses();
 selectSavedCourse();
 renderCustomHoleRows();
@@ -253,7 +339,15 @@ function getSavedCourses() {
     try {
         const savedCourses = JSON.parse(savedCoursesText);
         return Array.isArray(savedCourses)
-            ? savedCourses.filter(isValidCourse)
+            ? savedCourses.filter(function (course) {
+                return (
+                    isValidCourse(course) &&
+                    !(
+                        course.externalId === HON_E_KOR_API_ID &&
+                        !course.id.startsWith("honekor:")
+                    )
+                );
+            })
             : [];
     } catch {
         return [];
@@ -388,13 +482,36 @@ function updateRoundFormatOptions(preferredFormat) {
 
     roundFormatGroup.classList.remove("hidden");
     const holeCount = selectedCourse.holes.length;
-    const options = holeCount >= 18
-        ? [
+    let options;
+
+    if (Array.isArray(selectedCourse.nines) && selectedCourse.nines.length > 1) {
+        options = selectedCourse.nines.map(function (nine) {
+            return {
+                value: `nine:${nine.id}`,
+                label: `${nine.name} (9 Holes)`
+            };
+        });
+
+        selectedCourse.nines.forEach(function (firstNine) {
+            selectedCourse.nines.forEach(function (secondNine) {
+                if (firstNine.id !== secondNine.id) {
+                    options.push({
+                        value: `combo:${firstNine.id}:${secondNine.id}`,
+                        label: `${firstNine.name.replace(" Nine", "")} Front → ` +
+                            `${secondNine.name.replace(" Nine", "")} Back (18 Holes)`
+                    });
+                }
+            });
+        });
+    } else {
+        options = holeCount >= 18
+            ? [
             { value: "18", label: "Full 18 Holes" },
             { value: "front9", label: "Front 9" },
             { value: "back9", label: "Back 9" }
         ]
-        : [{ value: "all", label: `All ${holeCount} Holes` }];
+            : [{ value: "all", label: `All ${holeCount} Holes` }];
+    }
 
     options.forEach(function (roundOption) {
         const option = document.createElement("option");
@@ -411,6 +528,59 @@ function updateRoundFormatOptions(preferredFormat) {
 }
 
 function getRoundSelection(course, format = roundFormatSelect.value) {
+    if (format.startsWith("nine:") && Array.isArray(course.nines)) {
+        const nineId = format.split(":")[1];
+        const nine = course.nines.find(function (courseNine) {
+            return courseNine.id === nineId;
+        });
+
+        if (nine !== undefined) {
+            return {
+                format: format,
+                label: nine.name,
+                holes: nine.holes.map(function (hole, index) {
+                    return {
+                        ...hole,
+                        number: index + 1,
+                        nineId: nine.id,
+                        nineName: nine.name
+                    };
+                })
+            };
+        }
+    }
+
+    if (format.startsWith("combo:") && Array.isArray(course.nines)) {
+        const [, firstId, secondId] = format.split(":");
+        const firstNine = course.nines.find(function (nine) {
+            return nine.id === firstId;
+        });
+        const secondNine = course.nines.find(function (nine) {
+            return nine.id === secondId;
+        });
+
+        if (firstNine !== undefined && secondNine !== undefined) {
+            const firstName = firstNine.name.replace(" Nine", "");
+            const secondName = secondNine.name.replace(" Nine", "");
+            const holes = [firstNine, secondNine].flatMap(function (nine, nineIndex) {
+                return nine.holes.map(function (hole, index) {
+                    return {
+                        ...hole,
+                        number: index + 1 + (nineIndex * 9),
+                        nineId: nine.id,
+                        nineName: nine.name
+                    };
+                });
+            });
+
+            return {
+                format: format,
+                label: `${firstName} → ${secondName}`,
+                holes: holes
+            };
+        }
+    }
+
     if (format === "front9") {
         return {
             format: "front9",
@@ -484,7 +654,9 @@ function updateCourseActionButtons() {
             : "☆ Favorite";
     editCourseButton.classList.toggle(
         "hidden",
-        !hasCourse || selectedCourse.source === "built-in"
+        !hasCourse ||
+            selectedCourse.source === "built-in" ||
+            Array.isArray(selectedCourse.nines)
     );
 }
 
@@ -564,6 +736,11 @@ async function loadCourseDetails(searchResult) {
     courseSearchMessage.textContent = "Loading scorecard and tee boxes…";
     teeGroup.classList.add("hidden");
 
+    if (searchResult.id === HON_E_KOR_API_ID) {
+        loadHonEKorDetails();
+        return;
+    }
+
     try {
         const response = await fetch(
             `${COURSE_DETAIL_URL}/${encodeURIComponent(searchResult.id)}`
@@ -602,6 +779,31 @@ async function loadCourseDetails(searchResult) {
     }
 }
 
+function loadHonEKorDetails() {
+    pendingApiCourseDetail = {
+        specialCourse: "honekor",
+        tees: [
+            { tee_key: "blue", tee_name: "Blue Tee" },
+            { tee_key: "white", tee_name: "White Tee" },
+            { tee_key: "red", tee_name: "Red Tee" }
+        ]
+    };
+    teeSelect.replaceChildren();
+
+    pendingApiCourseDetail.tees.forEach(function (tee, index) {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = tee.tee_name;
+        teeSelect.append(option);
+    });
+
+    teeGroup.classList.remove("hidden");
+    courseSearchMessage.textContent =
+        "Verified 27-hole scorecard loaded. Choose your tee and nine combination.";
+    selectApiTee();
+    teeSelect.focus();
+}
+
 function getTeeLabel(tee) {
     const details = [tee.tee_name || tee.tee_color || "Tee"];
 
@@ -628,6 +830,18 @@ function selectApiTee() {
     const tee = pendingApiCourseDetail.tees[Number(teeSelect.value)];
 
     if (tee === undefined) {
+        return;
+    }
+
+    if (pendingApiCourseDetail.specialCourse === "honekor") {
+        const course = courses[`honekor:${tee.tee_key}`];
+
+        courseSelect.value = course.id;
+        selectedCourse = course;
+        updateRoundFormatOptions();
+        updateSelectedCourseCard();
+        courseSearchMessage.textContent =
+            "Hon-E-Kor is ready. Choose a single nine or an 18-hole combination.";
         return;
     }
 

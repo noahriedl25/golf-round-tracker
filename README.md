@@ -17,10 +17,14 @@ A web application that helps golfers analyze their rounds and identify where the
 - Save an in-progress round, return home, and resume later
 - View an in-round scorecard and course-specific personal bests
 - Automatically record current temperature and wind when location is available
+- Play Hon-E-Kor's Red, White, or Blue nine, including every ordered 18-hole pairing
 
 Course and scorecard search data is provided by
 [OpenGolfAPI](https://opengolfapi.org/) under the ODbL 1.0 license.
 Current round conditions are provided by [Open-Meteo](https://open-meteo.com/).
+Hon-E-Kor's three-nine configuration is verified against the
+[official course details](https://hon-e-kor.com/course-details-rates/) and its
+public combination scorecards.
 
 ## Built With
 
