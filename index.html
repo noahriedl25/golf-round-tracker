@@ -30,7 +30,52 @@
         </header>
 
         <section id="setup-section">
-            <h2>Start a Round</h2>
+            <div class="home-heading">
+                <div>
+                    <h2>Home</h2>
+                    <p>Ready for your next round?</p>
+                </div>
+            </div>
+
+            <div class="home-statistics-grid">
+                <div>
+                    <span>Career Rounds</span>
+                    <strong id="dashboard-career-rounds">0</strong>
+                </div>
+                <div>
+                    <span>Handicap Estimate</span>
+                    <strong id="dashboard-handicap">—</strong>
+                </div>
+                <div>
+                    <span>Personal Best</span>
+                    <strong id="dashboard-personal-best">—</strong>
+                </div>
+            </div>
+
+            <div id="active-round-card" class="active-round-card hidden">
+                <strong>Round in Progress</strong>
+                <span id="active-round-details"></span>
+                <button
+                    id="discard-round-button"
+                    class="discard-round-button"
+                    type="button"
+                >
+                    Discard Saved Round
+                </button>
+            </div>
+
+            <div id="home-recent-round" class="home-dashboard-card hidden">
+                <span>Most Recent Round</span>
+                <strong id="home-recent-round-course"></strong>
+                <small id="home-recent-round-details"></small>
+            </div>
+
+            <div id="home-favorites-section" class="home-dashboard-card hidden">
+                <span>Favorite Courses</span>
+                <div id="home-favorite-courses" class="favorite-course-list"></div>
+            </div>
+
+            <h3 class="start-round-heading">Start a Round</h3>
 
             <form id="course-search-form" class="course-search-form">
                 <label for="course-search-input">Search U.S. Courses</label>
@@ -106,18 +151,6 @@
                 </button>
             </div>
 
-            <div id="active-round-card" class="active-round-card hidden">
-                <strong>Round in Progress</strong>
-                <span id="active-round-details"></span>
-                <button
-                    id="discard-round-button"
-                    class="discard-round-button"
-                    type="button"
-                >
-                    Discard Saved Round
-                </button>
-            </div>
-
             <button
                 id="resume-round-button"
                 class="secondary-button hidden"
@@ -181,7 +214,9 @@
             <div class="section-heading">
                 <div>
                     <h2>Statistics</h2>
-                    <p class="section-subtitle">Your performance across saved rounds</p>
+                    <p id="statistics-period-label" class="section-subtitle">
+                        Your current career
+                    </p>
                 </div>
 
                 <button
@@ -228,7 +263,29 @@
                         <span>Penalties / Round</span>
                         <strong id="penalties-stat">—</strong>
                     </div>
+
+                    <div class="statistic-card">
+                        <span>Handicap Estimate</span>
+                        <strong id="handicap-estimate-stat">—</strong>
+                    </div>
+
+                    <div class="statistic-card">
+                        <span>Eligible Differentials</span>
+                        <strong id="eligible-differentials-stat">0</strong>
+                    </div>
                 </div>
+
+                <p class="handicap-note">
+                    Unofficial estimate based on recent score differentials.
+                    Nine-hole and unrated rounds use a par-based approximation.
+                    <a
+                        href="https://www.usga.org/content/usga/home-page/handicapping/world-handicap-system/world-handicap-system-usga-golf-faqs/faqs---how-is-a-handicap-index-calculated.html"
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        USGA calculation overview
+                    </a>
+                </p>
 
                 <div class="statistics-panel">
                     <h3>Best Round</h3>
@@ -260,6 +317,23 @@
                     <h3>Personal Bests</h3>
                     <div id="personal-bests"></div>
                 </div>
+            </div>
+
+            <div class="career-settings-panel">
+                <h3>Career Settings</h3>
+                <p id="career-start-text">
+                    Career statistics include every completed round.
+                </p>
+                <button id="reset-career-button" class="danger-button" type="button">
+                    Start a New Career
+                </button>
+                <button
+                    id="undo-career-reset-button"
+                    class="secondary-button hidden"
+                    type="button"
+                >
+                    Undo Last Career Reset
+                </button>
             </div>
         </section>
 
@@ -484,6 +558,31 @@
                 </button>
             </div>
         </section>
+
+        <dialog id="edit-round-dialog">
+            <div class="section-heading">
+                <div>
+                    <h2>Edit Scorecard</h2>
+                    <p id="edit-round-subtitle" class="section-subtitle"></p>
+                </div>
+
+                <button
+                    id="close-edit-round-button"
+                    class="small-secondary-button"
+                    type="button"
+                >
+                    Close
+                </button>
+            </div>
+
+            <form id="edit-round-form">
+                <div id="edit-round-scorecard" class="edit-round-scorecard"></div>
+                <p id="edit-round-message" class="message"></p>
+                <button id="save-edited-round-button" type="submit">
+                    Save Scorecard Changes
+                </button>
+            </form>
+        </dialog>
 
         <dialog id="scorecard-overview-dialog">
             <div class="section-heading">

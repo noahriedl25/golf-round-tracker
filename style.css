@@ -98,6 +98,92 @@ button:disabled {
     margin-bottom: 8px;
 }
 
+.home-heading h2,
+.home-heading p {
+    margin: 0;
+}
+
+.home-heading p {
+    margin-top: 5px;
+    color: #52606d;
+}
+
+.home-statistics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 18px 0;
+}
+
+.home-statistics-grid div {
+    padding: 12px 6px;
+    text-align: center;
+    background-color: #f3f7f4;
+    border-radius: 9px;
+}
+
+.home-statistics-grid span,
+.home-statistics-grid strong {
+    display: block;
+}
+
+.home-statistics-grid span {
+    min-height: 30px;
+    color: #52606d;
+    font-size: 11px;
+}
+
+.home-statistics-grid strong {
+    margin-top: 5px;
+    color: #14532d;
+    font-size: 21px;
+}
+
+.home-dashboard-card {
+    margin-top: 12px;
+    padding: 13px;
+    background-color: #f3f7f4;
+    border-radius: 9px;
+}
+
+.home-dashboard-card > span,
+.home-dashboard-card > strong,
+.home-dashboard-card > small {
+    display: block;
+}
+
+.home-dashboard-card > span {
+    margin-bottom: 5px;
+    color: #52606d;
+    font-size: 12px;
+}
+
+.home-dashboard-card > small {
+    margin-top: 4px;
+    color: #52606d;
+}
+
+.favorite-course-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.favorite-course-chip {
+    padding: 8px 10px;
+    color: #166534;
+    background-color: #dcfce7;
+    font-size: 13px;
+}
+
+.favorite-course-chip:hover {
+    background-color: #bbf7d0;
+}
+
+.start-round-heading {
+    margin: 24px 0 14px;
+}
+
 .search-control {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -263,6 +349,21 @@ button:disabled {
     background-color: #fecaca;
 }
 
+.danger-button,
+.small-danger-button {
+    color: #991b1b;
+    background-color: #fee2e2;
+}
+
+.danger-button:hover,
+.small-danger-button:hover {
+    background-color: #fecaca;
+}
+
+.small-danger-button {
+    padding: 9px 14px;
+}
+
 .active-round-card span {
     margin-top: 4px;
     color: #52606d;
@@ -280,7 +381,8 @@ button:disabled {
     text-align: center;
 }
 
-#scorecard-overview-dialog {
+#scorecard-overview-dialog,
+#edit-round-dialog {
     width: min(92%, 520px);
     max-height: 85vh;
     padding: 22px;
@@ -289,8 +391,65 @@ button:disabled {
     box-shadow: 0 12px 35px rgba(0, 0, 0, 0.24);
 }
 
-#scorecard-overview-dialog::backdrop {
+#scorecard-overview-dialog::backdrop,
+#edit-round-dialog::backdrop {
     background-color: rgba(15, 23, 42, 0.55);
+}
+
+.career-settings-panel {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid #d9e2ec;
+}
+
+.career-settings-panel h3 {
+    margin: 0 0 7px;
+}
+
+.career-settings-panel p {
+    color: #52606d;
+    font-size: 14px;
+}
+
+.career-settings-panel .danger-button {
+    width: 100%;
+}
+
+.history-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.edit-round-scorecard {
+    margin-top: 18px;
+    overflow-x: auto;
+}
+
+.edit-round-row {
+    display: grid;
+    grid-template-columns: 64px repeat(4, minmax(58px, 1fr));
+    gap: 6px;
+    align-items: center;
+    min-width: 420px;
+    margin-bottom: 7px;
+}
+
+.edit-round-row input,
+.edit-round-row select {
+    padding: 8px 5px;
+    text-align: center;
+}
+
+.edit-round-headings {
+    color: #52606d;
+    font-size: 11px;
+    text-align: center;
+}
+
+#save-edited-round-button {
+    width: 100%;
 }
 
 #scorecard-overview-dialog tbody tr {
@@ -609,6 +768,16 @@ th {
     margin-top: 22px;
     padding-top: 20px;
     border-top: 1px solid #d9e2ec;
+}
+
+.handicap-note {
+    margin: 12px 0 0;
+    color: #52606d;
+    font-size: 12px;
+}
+
+.handicap-note a {
+    color: #166534;
 }
 
 .statistics-panel h3 {

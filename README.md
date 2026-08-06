@@ -18,6 +18,10 @@ A web application that helps golfers analyze their rounds and identify where the
 - View an in-round scorecard and course-specific personal bests
 - Automatically record current temperature and wind when location is available
 - Play Hon-E-Kor's Red, White, or Blue nine, including every ordered 18-hole pairing
+- Start a new statistics career without deleting older scorecards
+- Edit or delete completed rounds from Round History
+- View a World Handicap System-inspired estimate from recent rounds
+- Use a home dashboard for active rounds, favorites, recent results, and career progress
 
 Course and scorecard search data is provided by
 [OpenGolfAPI](https://opengolfapi.org/) under the ODbL 1.0 license.
@@ -25,6 +29,11 @@ Current round conditions are provided by [Open-Meteo](https://open-meteo.com/).
 Hon-E-Kor's three-nine configuration is verified against the
 [official course details](https://hon-e-kor.com/course-details-rates/) and its
 public combination scorecards.
+
+The handicap shown in the tracker is an unofficial estimate. Rated 18-hole
+rounds use stored Course Rating and Slope Rating; unrated and nine-hole rounds
+use a par-based approximation. Use an authorized golf association for an
+official Handicap Index.
 
 ## Built With
 

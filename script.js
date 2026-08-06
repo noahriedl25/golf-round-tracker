@@ -24,6 +24,14 @@ const editCourseButton = document.getElementById("edit-course-button");
 const activeRoundCard = document.getElementById("active-round-card");
 const activeRoundDetails = document.getElementById("active-round-details");
 const discardRoundButton = document.getElementById("discard-round-button");
+const dashboardCareerRounds = document.getElementById("dashboard-career-rounds");
+const dashboardHandicap = document.getElementById("dashboard-handicap");
+const dashboardPersonalBest = document.getElementById("dashboard-personal-best");
+const homeRecentRound = document.getElementById("home-recent-round");
+const homeRecentRoundCourse = document.getElementById("home-recent-round-course");
+const homeRecentRoundDetails = document.getElementById("home-recent-round-details");
+const homeFavoritesSection = document.getElementById("home-favorites-section");
+const homeFavoriteCourses = document.getElementById("home-favorite-courses");
 const customCourseBackButton = document.getElementById("custom-course-back-button");
 const customCourseForm = document.getElementById("custom-course-form");
 const customCourseNameInput = document.getElementById("custom-course-name");
@@ -55,6 +63,19 @@ const holeTypeStats = document.getElementById("hole-type-stats");
 const trendSummary = document.getElementById("trend-summary");
 const recentResults = document.getElementById("recent-results");
 const personalBests = document.getElementById("personal-bests");
+const statisticsPeriodLabel = document.getElementById("statistics-period-label");
+const handicapEstimateStat = document.getElementById("handicap-estimate-stat");
+const eligibleDifferentialsStat = document.getElementById("eligible-differentials-stat");
+const careerStartText = document.getElementById("career-start-text");
+const resetCareerButton = document.getElementById("reset-career-button");
+const undoCareerResetButton = document.getElementById("undo-career-reset-button");
+
+const editRoundDialog = document.getElementById("edit-round-dialog");
+const editRoundSubtitle = document.getElementById("edit-round-subtitle");
+const editRoundForm = document.getElementById("edit-round-form");
+const editRoundScorecard = document.getElementById("edit-round-scorecard");
+const editRoundMessage = document.getElementById("edit-round-message");
+const closeEditRoundButton = document.getElementById("close-edit-round-button");
 
 const roundHomeButton = document.getElementById("round-home-button");
 const scorecardOverviewButton = document.getElementById("scorecard-overview-button");
@@ -104,6 +125,8 @@ const ACTIVE_ROUND_KEY = "golfTrackerActiveRound";
 const ROUND_HISTORY_KEY = "golfTrackerRoundHistory";
 const SAVED_COURSES_KEY = "golfTrackerSavedCourses";
 const FAVORITE_COURSES_KEY = "golfTrackerFavoriteCourses";
+const CAREER_START_KEY = "golfTrackerCareerStart";
+const PREVIOUS_CAREER_START_KEY = "golfTrackerPreviousCareerStart";
 const COURSE_SEARCH_URL = "https://api.opengolfapi.org/v1/courses/search";
 const COURSE_DETAIL_URL = "https://api.opengolfapi.org/api/v1/courses";
 const HON_E_KOR_API_ID = "a85a271e-6abd-4fab-8ed6-9b96c6fe9cb9";
@@ -264,6 +287,7 @@ let pendingApiCourseDetail = null;
 let editingCourseId = null;
 let roundConditions = null;
 let activeRoundToken = null;
+let editingCompletedRoundId = null;
 
 startRoundButton.addEventListener("click", startRound);
 courseSelect.addEventListener("change", selectSavedCourse);
@@ -276,6 +300,8 @@ addCustomCourseButton.addEventListener("click", function () {
 favoriteCourseButton.addEventListener("click", toggleFavoriteCourse);
 editCourseButton.addEventListener("click", editSelectedCourse);
 discardRoundButton.addEventListener("click", discardSavedRound);
+resetCareerButton.addEventListener("click", resetCareerStatistics);
+undoCareerResetButton.addEventListener("click", undoCareerReset);
 customCourseBackButton.addEventListener("click", showSetup);
 customCourseForm.addEventListener("submit", saveCustomCourse);
 customHoleCountSelect.addEventListener("change", renderCustomHoleRows);
@@ -291,6 +317,10 @@ scorecardOverviewButton.addEventListener("click", showScorecardOverview);
 closeScorecardButton.addEventListener("click", function () {
     scorecardOverviewDialog.close();
 });
+closeEditRoundButton.addEventListener("click", function () {
+    editRoundDialog.close();
+});
+editRoundForm.addEventListener("submit", saveEditedCompletedRound);
 
 scoreInput.addEventListener("change", saveInputProgress);
 puttsInput.addEventListener("change", saveInputProgress);
@@ -304,6 +334,7 @@ loadSavedCourses();
 selectSavedCourse();
 renderCustomHoleRows();
 checkForSavedRound();
+renderHomeDashboard();
 
 scoreMinusButton.addEventListener("click", function () {
     changeNumberInput(scoreInput, -1, 1);
@@ -395,6 +426,7 @@ function toggleFavoriteCourse() {
     localStorage.setItem(FAVORITE_COURSES_KEY, JSON.stringify(favoriteIds));
     addCourseOption(courses[courseId] ?? selectedCourse);
     updateCourseActionButtons();
+    renderHomeDashboard();
 }
 
 function isValidCourse(course) {
@@ -870,6 +902,12 @@ function selectApiTee() {
             .join(", "),
         latitude: Number(pendingApiCourseDetail.lat),
         longitude: Number(pendingApiCourseDetail.lng),
+        courseRating: Number.isFinite(Number(tee.course_rating))
+            ? Number(tee.course_rating)
+            : null,
+        slopeRating: Number.isFinite(Number(tee.slope))
+            ? Number(tee.slope)
+            : null,
         source: "opengolfapi",
         holes: holes
     };
@@ -1562,6 +1600,81 @@ function getRoundHistory() {
     }
 }
 
+function getCareerStart() {
+    const careerStart = localStorage.getItem(CAREER_START_KEY);
+
+    if (careerStart === null || Number.isNaN(new Date(careerStart).getTime())) {
+        return null;
+    }
+
+    return careerStart;
+}
+
+function getCareerHistory() {
+    const history = getRoundHistory();
+    const careerStart = getCareerStart();
+
+    if (careerStart === null) {
+        return history;
+    }
+
+    const startTime = new Date(careerStart).getTime();
+    return history.filter(function (round) {
+        return new Date(round.completedAt).getTime() >= startTime;
+    });
+}
+
+function resetCareerStatistics() {
+    if (!window.confirm(
+        "Start a new career? Your existing rounds will remain in Round History, " +
+        "but they will stop counting toward current career statistics."
+    )) {
+        return;
+    }
+
+    if (!window.confirm(
+        "Please confirm again: current statistics and personal-best displays " +
+        "will restart from zero. No scorecards will be deleted."
+    )) {
+        return;
+    }
+
+    if (window.prompt("Type RESET to start a new career.") !== "RESET") {
+        return;
+    }
+
+    const currentStart = localStorage.getItem(CAREER_START_KEY);
+    localStorage.setItem(
+        PREVIOUS_CAREER_START_KEY,
+        currentStart ?? "__ALL_ROUNDS__"
+    );
+    localStorage.setItem(CAREER_START_KEY, new Date().toISOString());
+    renderStatistics();
+    renderHomeDashboard();
+}
+
+function undoCareerReset() {
+    const previousStart = localStorage.getItem(PREVIOUS_CAREER_START_KEY);
+
+    if (previousStart === null) {
+        return;
+    }
+
+    if (!window.confirm("Restore the previous career statistics period?")) {
+        return;
+    }
+
+    if (previousStart === "__ALL_ROUNDS__") {
+        localStorage.removeItem(CAREER_START_KEY);
+    } else {
+        localStorage.setItem(CAREER_START_KEY, previousStart);
+    }
+
+    localStorage.removeItem(PREVIOUS_CAREER_START_KEY);
+    renderStatistics();
+    renderHomeDashboard();
+}
+
 function isValidCompletedRound(round) {
     return (
         round !== null &&
@@ -1592,7 +1705,203 @@ function isValidCompletedRound(round) {
 function saveCompletedRound(round) {
     const history = getRoundHistory();
     history.unshift(round);
+    saveRoundHistory(history);
+}
+
+function saveRoundHistory(history) {
     localStorage.setItem(ROUND_HISTORY_KEY, JSON.stringify(history));
+}
+
+function deleteCompletedRound(roundId) {
+    const round = getRoundHistory().find(function (historyRound) {
+        return historyRound.id === roundId;
+    });
+
+    if (round === undefined) {
+        return;
+    }
+
+    if (!window.confirm(
+        `Delete the ${formatRoundDate(round.completedAt)} round at ` +
+        `${round.courseName}? This cannot be undone.`
+    )) {
+        return;
+    }
+
+    saveRoundHistory(getRoundHistory().filter(function (historyRound) {
+        return historyRound.id !== roundId;
+    }));
+    renderRoundHistory();
+    renderHomeDashboard();
+}
+
+function showEditCompletedRound(roundId) {
+    const round = getRoundHistory().find(function (historyRound) {
+        return historyRound.id === roundId;
+    });
+
+    if (round === undefined) {
+        return;
+    }
+
+    editingCompletedRoundId = roundId;
+    editRoundMessage.textContent = "";
+    editRoundSubtitle.textContent = [
+        round.courseName,
+        round.teeName,
+        round.roundLabel ?? `${round.holes.length} Holes`
+    ].filter(Boolean).join(" · ");
+    editRoundScorecard.replaceChildren();
+
+    const headings = document.createElement("div");
+    headings.className = "edit-round-row edit-round-headings";
+    ["Hole", "Score", "Putts", "Fairway", "Pen."].forEach(function (label) {
+        const heading = document.createElement("strong");
+        heading.textContent = label;
+        headings.append(heading);
+    });
+    editRoundScorecard.append(headings);
+
+    round.holes.forEach(function (hole, index) {
+        const row = document.createElement("div");
+        const holeLabel = document.createElement("strong");
+        const score = createEditNumberInput(`Hole ${hole.number} score`, hole.score, 1);
+        const putts = createEditNumberInput(`Hole ${hole.number} putts`, hole.putts, 0);
+        const fairway = document.createElement("select");
+        const penalties = createEditNumberInput(
+            `Hole ${hole.number} penalties`,
+            hole.penalties,
+            0
+        );
+
+        row.className = "edit-round-row";
+        row.dataset.index = index;
+        holeLabel.textContent = `${hole.number} · P${hole.par}`;
+        score.className = "edit-score-input";
+        putts.className = "edit-putts-input";
+        penalties.className = "edit-penalties-input";
+        fairway.className = "edit-fairway-input";
+        fairway.setAttribute("aria-label", `Hole ${hole.number} fairway`);
+
+        const fairwayOptions = hole.par === 3
+            ? [{ value: "na", label: "—" }]
+            : [
+                { value: "hit", label: "Hit" },
+                { value: "left", label: "Left" },
+                { value: "right", label: "Right" }
+            ];
+        fairwayOptions.forEach(function (fairwayOption) {
+            const option = document.createElement("option");
+            option.value = fairwayOption.value;
+            option.textContent = fairwayOption.label;
+            fairway.append(option);
+        });
+        fairway.value = hole.par === 3 ? "na" : hole.fairway;
+        row.append(holeLabel, score, putts, fairway, penalties);
+        editRoundScorecard.append(row);
+    });
+
+    editRoundDialog.showModal();
+}
+
+function createEditNumberInput(label, value, minimum) {
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = String(minimum);
+    input.required = true;
+    input.value = value;
+    input.setAttribute("aria-label", label);
+    return input;
+}
+
+function saveEditedCompletedRound(event) {
+    event.preventDefault();
+    const history = getRoundHistory();
+    const roundIndex = history.findIndex(function (round) {
+        return round.id === editingCompletedRoundId;
+    });
+
+    if (roundIndex === -1) {
+        editRoundDialog.close();
+        return;
+    }
+
+    const originalRound = history[roundIndex];
+    const rows = Array.from(
+        editRoundScorecard.querySelectorAll(".edit-round-row[data-index]")
+    );
+    const holes = rows.map(function (row, index) {
+        const originalHole = originalRound.holes[index];
+        return {
+            ...originalHole,
+            score: Number(row.querySelector(".edit-score-input").value),
+            putts: Number(row.querySelector(".edit-putts-input").value),
+            fairway: row.querySelector(".edit-fairway-input").value,
+            penalties: Number(row.querySelector(".edit-penalties-input").value)
+        };
+    });
+
+    if (holes.some(function (hole) {
+        return (
+            !Number.isInteger(hole.score) ||
+            hole.score < 1 ||
+            !Number.isInteger(hole.putts) ||
+            hole.putts < 0 ||
+            !Number.isInteger(hole.penalties) ||
+            hole.penalties < 0 ||
+            (hole.par !== 3 && !["hit", "left", "right"].includes(hole.fairway))
+        );
+    })) {
+        editRoundMessage.textContent = "Enter valid results for every hole.";
+        return;
+    }
+
+    const totals = calculateCompletedRoundTotals(holes);
+    history[roundIndex] = {
+        ...originalRound,
+        ...totals,
+        holes: holes,
+        editedAt: new Date().toISOString()
+    };
+    saveRoundHistory(history);
+    editingCompletedRoundId = null;
+    editRoundDialog.close();
+    renderRoundHistory();
+    renderHomeDashboard();
+}
+
+function calculateCompletedRoundTotals(holes) {
+    const totals = holes.reduce(function (result, hole) {
+        result.totalScore += hole.score;
+        result.totalPar += hole.par;
+        result.totalPutts += hole.putts;
+        result.totalPenalties += hole.penalties;
+
+        if (hole.par !== 3) {
+            result.fairwayOpportunities++;
+
+            if (hole.fairway === "hit") {
+                result.fairwaysHit++;
+            }
+        }
+
+        return result;
+    }, {
+        totalScore: 0,
+        totalPar: 0,
+        totalPutts: 0,
+        totalPenalties: 0,
+        fairwaysHit: 0,
+        fairwayOpportunities: 0
+    });
+
+    return {
+        ...totals,
+        scoreToPar: totals.totalScore - totals.totalPar,
+        fairwayPercentage: totals.fairwayOpportunities === 0
+            ? 0
+            : Math.round((totals.fairwaysHit / totals.fairwayOpportunities) * 100)
+    };
 }
 
 function showRoundHistory() {
@@ -1611,6 +1920,7 @@ function showSetup() {
     roundSection.classList.add("hidden");
     setupSection.classList.remove("hidden");
     checkForSavedRound();
+    renderHomeDashboard();
 }
 
 function showStatistics() {
@@ -1623,13 +1933,28 @@ function showStatistics() {
 }
 
 function renderStatistics() {
-    const history = getRoundHistory();
+    const history = getCareerHistory();
     const hasRounds = history.length > 0;
+    const careerStart = getCareerStart();
+
+    statisticsPeriodLabel.textContent = careerStart === null
+        ? "Your performance across every saved round"
+        : `Current career started ${formatDateOnly(careerStart)}`;
+    careerStartText.textContent = careerStart === null
+        ? "Career statistics currently include every completed round."
+        : `Current career statistics include rounds since ${formatDateOnly(careerStart)}. ` +
+            "Older scorecards remain available in Round History.";
+    undoCareerResetButton.classList.toggle(
+        "hidden",
+        localStorage.getItem(PREVIOUS_CAREER_START_KEY) === null
+    );
 
     emptyStatisticsMessage.classList.toggle("hidden", hasRounds);
     statisticsContent.classList.toggle("hidden", !hasRounds);
 
     if (!hasRounds) {
+        handicapEstimateStat.textContent = "—";
+        eligibleDifferentialsStat.textContent = "0";
         return;
     }
 
@@ -1655,6 +1980,12 @@ function renderStatistics() {
         "totalPenalties"
     );
 
+    const handicap = calculateHandicapEstimate(history);
+    handicapEstimateStat.textContent = handicap.value === null
+        ? "—"
+        : handicap.value.toFixed(1);
+    eligibleDifferentialsStat.textContent = handicap.differentialCount;
+
     bestRoundCourse.textContent = statistics.bestRound.courseName;
     bestRoundDate.textContent =
         `${formatRoundDate(statistics.bestRound.completedAt)} · ` +
@@ -1665,6 +1996,157 @@ function renderStatistics() {
     renderHoleTypeStatistics(statistics.holeTypes);
     renderRecentResults(history.slice(0, 5));
     renderPersonalBests(history);
+}
+
+function renderHomeDashboard() {
+    const careerHistory = getCareerHistory();
+    const allHistory = getRoundHistory();
+    const handicap = calculateHandicapEstimate(careerHistory);
+    const bestRound = careerHistory.length === 0
+        ? null
+        : careerHistory.reduce(function (best, round) {
+            return round.scoreToPar < best.scoreToPar ? round : best;
+        });
+
+    dashboardCareerRounds.textContent = careerHistory.length;
+    dashboardHandicap.textContent = handicap.value === null
+        ? `${handicap.differentialCount}/3`
+        : handicap.value.toFixed(1);
+    dashboardPersonalBest.textContent = bestRound === null
+        ? "—"
+        : formatScoreToPar(bestRound.scoreToPar);
+
+    const recentRound = allHistory[0];
+    homeRecentRound.classList.toggle("hidden", recentRound === undefined);
+
+    if (recentRound !== undefined) {
+        homeRecentRoundCourse.textContent = recentRound.courseName;
+        homeRecentRoundDetails.textContent = [
+            recentRound.teeName,
+            recentRound.roundLabel ?? `${recentRound.holes.length} Holes`,
+            `${recentRound.totalScore} (${formatScoreToPar(recentRound.scoreToPar)})`,
+            formatDateOnly(recentRound.completedAt)
+        ].filter(Boolean).join(" · ");
+    }
+
+    homeFavoriteCourses.replaceChildren();
+    const favoriteCourses = getFavoriteCourseIds()
+        .map(function (courseId) {
+            return courses[courseId];
+        })
+        .filter(isValidCourse);
+    homeFavoritesSection.classList.toggle("hidden", favoriteCourses.length === 0);
+
+    favoriteCourses.forEach(function (course) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "favorite-course-chip";
+        button.textContent = getCourseOptionLabel(course).replace("★ ", "");
+        button.addEventListener("click", function () {
+            courseSelect.value = course.id;
+            selectSavedCourse();
+            courseSelect.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+        homeFavoriteCourses.append(button);
+    });
+}
+
+function formatDateOnly(dateText) {
+    const date = new Date(dateText);
+
+    if (Number.isNaN(date.getTime())) {
+        return "an unknown date";
+    }
+
+    return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
+}
+
+function calculateHandicapEstimate(history) {
+    const differentials = history
+        .slice(0, 20)
+        .map(calculateEstimatedDifferential)
+        .filter(Number.isFinite)
+        .sort(function (first, second) {
+            return first - second;
+        });
+    const count = differentials.length;
+
+    if (count < 3) {
+        return {
+            value: null,
+            differentialCount: count,
+            usedDifferentials: 0
+        };
+    }
+
+    let usedDifferentials;
+    let adjustment = 0;
+
+    if (count === 3) {
+        usedDifferentials = 1;
+        adjustment = -2;
+    } else if (count === 4) {
+        usedDifferentials = 1;
+        adjustment = -1;
+    } else if (count === 5) {
+        usedDifferentials = 1;
+    } else if (count === 6) {
+        usedDifferentials = 2;
+        adjustment = -1;
+    } else if (count <= 8) {
+        usedDifferentials = 2;
+    } else if (count <= 11) {
+        usedDifferentials = 3;
+    } else if (count <= 14) {
+        usedDifferentials = 4;
+    } else if (count <= 16) {
+        usedDifferentials = 5;
+    } else if (count <= 18) {
+        usedDifferentials = 6;
+    } else if (count === 19) {
+        usedDifferentials = 7;
+    } else {
+        usedDifferentials = 8;
+    }
+
+    const average = differentials
+        .slice(0, usedDifferentials)
+        .reduce(function (total, differential) {
+            return total + differential;
+        }, 0) / usedDifferentials;
+    const value = Math.min(54, Math.round((average + adjustment) * 10) / 10);
+
+    return {
+        value: value,
+        differentialCount: count,
+        usedDifferentials: usedDifferentials
+    };
+}
+
+function calculateEstimatedDifferential(round) {
+    if (
+        !Array.isArray(round.holes) ||
+        round.holes.length === 0 ||
+        !Number.isFinite(round.totalScore) ||
+        !Number.isFinite(round.totalPar)
+    ) {
+        return null;
+    }
+
+    const holeFactor = 18 / round.holes.length;
+    const isRatedEighteen =
+        round.holes.length === 18 &&
+        Number.isFinite(round.courseRating) &&
+        Number.isFinite(round.slopeRating) &&
+        round.slopeRating > 0;
+    const adjustedScore = round.totalScore * holeFactor;
+    const courseRating = isRatedEighteen
+        ? round.courseRating
+        : round.totalPar * holeFactor;
+    const slopeRating = isRatedEighteen ? round.slopeRating : 113;
+    const differential = (113 / slopeRating) * (adjustedScore - courseRating);
+
+    return Math.round(differential * 10) / 10;
 }
 
 function renderPersonalBests(history) {
@@ -1961,7 +2443,27 @@ function createHistoryCard(round) {
     scorecardSummary.textContent = "View scorecard";
     scorecard.append(scorecardSummary, createScorecard(round.holes));
 
-    card.append(heading, stats, scorecard);
+    const actions = document.createElement("div");
+    const editButton = document.createElement("button");
+    const deleteButton = document.createElement("button");
+    actions.className = "history-card-actions";
+    editButton.type = "button";
+    editButton.className = "small-secondary-button";
+    editButton.textContent = "Edit Scorecard";
+    editButton.setAttribute("aria-label", `Edit ${round.courseName} scorecard`);
+    editButton.addEventListener("click", function () {
+        showEditCompletedRound(round.id);
+    });
+    deleteButton.type = "button";
+    deleteButton.className = "small-danger-button";
+    deleteButton.textContent = "Delete Round";
+    deleteButton.setAttribute("aria-label", `Delete ${round.courseName} round`);
+    deleteButton.addEventListener("click", function () {
+        deleteCompletedRound(round.id);
+    });
+    actions.append(editButton, deleteButton);
+
+    card.append(heading, stats, scorecard, actions);
     return card;
 }
 
@@ -2116,6 +2618,8 @@ function finishRound() {
         roundFormat: selectedCourse.roundFormat ?? "all",
         roundLabel: selectedCourse.roundLabel ?? `${selectedCourse.holes.length} Holes`,
         conditions: roundConditions,
+        courseRating: selectedCourse.courseRating ?? null,
+        slopeRating: selectedCourse.slopeRating ?? null,
         totalScore: totalScore,
         totalPar: totalPar,
         scoreToPar: totalScore - totalPar,
