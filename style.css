@@ -168,6 +168,10 @@ button:disabled {
     margin-top: 16px;
 }
 
+#round-format-group {
+    margin-top: 16px;
+}
+
 .selected-course-card {
     margin-top: 14px;
     padding: 13px;
@@ -222,6 +226,105 @@ button:disabled {
 
 #save-custom-course-button {
     width: 100%;
+}
+
+.course-action-buttons,
+.round-action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.course-action-buttons .secondary-button {
+    margin-top: 12px;
+}
+
+.active-round-card {
+    margin-top: 16px;
+    padding: 13px;
+    background-color: #fef3c7;
+    border: 1px solid #fcd34d;
+    border-radius: 8px;
+}
+
+.active-round-card strong,
+.active-round-card span {
+    display: block;
+}
+
+.discard-round-button {
+    margin-top: 10px;
+    padding: 8px 10px;
+    color: #991b1b;
+    background-color: #fee2e2;
+}
+
+.discard-round-button:hover {
+    background-color: #fecaca;
+}
+
+.active-round-card span {
+    margin-top: 4px;
+    color: #52606d;
+    font-size: 13px;
+}
+
+.round-action-buttons {
+    margin-bottom: 16px;
+}
+
+.round-conditions {
+    margin: -5px 0 18px;
+    color: #52606d;
+    font-size: 13px;
+    text-align: center;
+}
+
+#scorecard-overview-dialog {
+    width: min(92%, 520px);
+    max-height: 85vh;
+    padding: 22px;
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.24);
+}
+
+#scorecard-overview-dialog::backdrop {
+    background-color: rgba(15, 23, 42, 0.55);
+}
+
+#scorecard-overview-dialog tbody tr {
+    cursor: pointer;
+}
+
+#scorecard-overview-dialog tbody tr:hover,
+#scorecard-overview-dialog .current-scorecard-hole {
+    background-color: #dcfce7;
+}
+
+.personal-best-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.personal-best-row:last-child {
+    border-bottom: none;
+}
+
+.personal-best-row span {
+    display: block;
+    margin-top: 4px;
+    color: #52606d;
+    font-size: 13px;
+}
+
+.personal-best-score {
+    color: #14532d;
+    white-space: nowrap;
 }
 
 .round-status {

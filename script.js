@@ -12,11 +12,18 @@ const courseSearchMessage = document.getElementById("course-search-message");
 const courseSearchResults = document.getElementById("course-search-results");
 const teeGroup = document.getElementById("tee-group");
 const teeSelect = document.getElementById("tee-select");
+const roundFormatGroup = document.getElementById("round-format-group");
+const roundFormatSelect = document.getElementById("round-format-select");
 const selectedCourseCard = document.getElementById("selected-course-card");
 const selectedCourseName = document.getElementById("selected-course-name");
 const selectedCourseDetails = document.getElementById("selected-course-details");
 const startRoundButton = document.getElementById("start-round-button");
 const addCustomCourseButton = document.getElementById("add-custom-course-button");
+const favoriteCourseButton = document.getElementById("favorite-course-button");
+const editCourseButton = document.getElementById("edit-course-button");
+const activeRoundCard = document.getElementById("active-round-card");
+const activeRoundDetails = document.getElementById("active-round-details");
+const discardRoundButton = document.getElementById("discard-round-button");
 const customCourseBackButton = document.getElementById("custom-course-back-button");
 const customCourseForm = document.getElementById("custom-course-form");
 const customCourseNameInput = document.getElementById("custom-course-name");
@@ -47,6 +54,15 @@ const bestRoundToPar = document.getElementById("best-round-to-par");
 const holeTypeStats = document.getElementById("hole-type-stats");
 const trendSummary = document.getElementById("trend-summary");
 const recentResults = document.getElementById("recent-results");
+const personalBests = document.getElementById("personal-bests");
+
+const roundHomeButton = document.getElementById("round-home-button");
+const scorecardOverviewButton = document.getElementById("scorecard-overview-button");
+const scorecardOverviewDialog = document.getElementById("scorecard-overview-dialog");
+const scorecardOverviewSubtitle = document.getElementById("scorecard-overview-subtitle");
+const scorecardOverviewContent = document.getElementById("scorecard-overview-content");
+const closeScorecardButton = document.getElementById("close-scorecard-button");
+const roundConditionsText = document.getElementById("round-conditions");
 
 const holeNumberText = document.getElementById("hole-number");
 const holeParText = document.getElementById("hole-par");
@@ -87,6 +103,7 @@ const penaltiesPlusButton = document.getElementById("penalties-plus-button");
 const ACTIVE_ROUND_KEY = "golfTrackerActiveRound";
 const ROUND_HISTORY_KEY = "golfTrackerRoundHistory";
 const SAVED_COURSES_KEY = "golfTrackerSavedCourses";
+const FAVORITE_COURSES_KEY = "golfTrackerFavoriteCourses";
 const COURSE_SEARCH_URL = "https://api.opengolfapi.org/v1/courses/search";
 const COURSE_DETAIL_URL = "https://api.opengolfapi.org/api/v1/courses";
 const US_STATE_CODES = new Set([
@@ -161,12 +178,21 @@ let selectedCourse = null;
 let currentHoleIndex = 0;
 let roundResults = [];
 let pendingApiCourseDetail = null;
+let editingCourseId = null;
+let roundConditions = null;
+let activeRoundToken = null;
 
 startRoundButton.addEventListener("click", startRound);
 courseSelect.addEventListener("change", selectSavedCourse);
 courseSearchForm.addEventListener("submit", searchCourses);
 teeSelect.addEventListener("change", selectApiTee);
-addCustomCourseButton.addEventListener("click", showCustomCourse);
+roundFormatSelect.addEventListener("change", updateSelectedCourseCard);
+addCustomCourseButton.addEventListener("click", function () {
+    showCustomCourse();
+});
+favoriteCourseButton.addEventListener("click", toggleFavoriteCourse);
+editCourseButton.addEventListener("click", editSelectedCourse);
+discardRoundButton.addEventListener("click", discardSavedRound);
 customCourseBackButton.addEventListener("click", showSetup);
 customCourseForm.addEventListener("submit", saveCustomCourse);
 customHoleCountSelect.addEventListener("change", renderCustomHoleRows);
@@ -177,6 +203,11 @@ historyButton.addEventListener("click", showRoundHistory);
 historyBackButton.addEventListener("click", showSetup);
 statisticsButton.addEventListener("click", showStatistics);
 statisticsBackButton.addEventListener("click", showSetup);
+roundHomeButton.addEventListener("click", saveRoundAndGoHome);
+scorecardOverviewButton.addEventListener("click", showScorecardOverview);
+closeScorecardButton.addEventListener("click", function () {
+    scorecardOverviewDialog.close();
+});
 
 scoreInput.addEventListener("change", saveInputProgress);
 puttsInput.addEventListener("change", saveInputProgress);
@@ -227,6 +258,49 @@ function getSavedCourses() {
     } catch {
         return [];
     }
+}
+
+function getFavoriteCourseIds() {
+    const favoriteText = localStorage.getItem(FAVORITE_COURSES_KEY);
+
+    if (favoriteText === null) {
+        return [];
+    }
+
+    try {
+        const favoriteIds = JSON.parse(favoriteText);
+        return Array.isArray(favoriteIds)
+            ? favoriteIds.filter(function (id) {
+                return typeof id === "string";
+            })
+            : [];
+    } catch {
+        return [];
+    }
+}
+
+function isFavoriteCourse(courseId) {
+    return getFavoriteCourseIds().includes(courseId);
+}
+
+function toggleFavoriteCourse() {
+    if (selectedCourse === null) {
+        return;
+    }
+
+    const courseId = selectedCourse.id;
+    const favoriteIds = getFavoriteCourseIds();
+    const existingIndex = favoriteIds.indexOf(courseId);
+
+    if (existingIndex === -1) {
+        favoriteIds.push(courseId);
+    } else {
+        favoriteIds.splice(existingIndex, 1);
+    }
+
+    localStorage.setItem(FAVORITE_COURSES_KEY, JSON.stringify(favoriteIds));
+    addCourseOption(courses[courseId] ?? selectedCourse);
+    updateCourseActionButtons();
 }
 
 function isValidCourse(course) {
@@ -289,31 +363,100 @@ function addCourseOption(course) {
 }
 
 function getCourseOptionLabel(course) {
-    return course.teeName && course.teeName !== "Default"
+    const label = course.teeName && course.teeName !== "Default"
         ? `${course.name} — ${course.teeName}`
         : course.name;
+
+    return isFavoriteCourse(course.id) ? `★ ${label}` : label;
 }
 
 function selectSavedCourse() {
     selectedCourse = courses[courseSelect.value] ?? null;
     pendingApiCourseDetail = null;
     teeGroup.classList.add("hidden");
+    updateRoundFormatOptions();
     updateSelectedCourseCard();
+}
+
+function updateRoundFormatOptions(preferredFormat) {
+    roundFormatSelect.replaceChildren();
+
+    if (selectedCourse === null) {
+        roundFormatGroup.classList.add("hidden");
+        return;
+    }
+
+    roundFormatGroup.classList.remove("hidden");
+    const holeCount = selectedCourse.holes.length;
+    const options = holeCount >= 18
+        ? [
+            { value: "18", label: "Full 18 Holes" },
+            { value: "front9", label: "Front 9" },
+            { value: "back9", label: "Back 9" }
+        ]
+        : [{ value: "all", label: `All ${holeCount} Holes` }];
+
+    options.forEach(function (roundOption) {
+        const option = document.createElement("option");
+        option.value = roundOption.value;
+        option.textContent = roundOption.label;
+        roundFormatSelect.append(option);
+    });
+
+    if (preferredFormat && options.some(function (option) {
+        return option.value === preferredFormat;
+    })) {
+        roundFormatSelect.value = preferredFormat;
+    }
+}
+
+function getRoundSelection(course, format = roundFormatSelect.value) {
+    if (format === "front9") {
+        return {
+            format: "front9",
+            label: "Front 9",
+            holes: course.holes.slice(0, 9)
+        };
+    }
+
+    if (format === "back9") {
+        return {
+            format: "back9",
+            label: "Back 9",
+            holes: course.holes.slice(9, 18)
+        };
+    }
+
+    if (format === "18") {
+        return {
+            format: "18",
+            label: "Full 18",
+            holes: course.holes.slice(0, 18)
+        };
+    }
+
+    return {
+        format: "all",
+        label: `${course.holes.length} Holes`,
+        holes: course.holes.slice()
+    };
 }
 
 function updateSelectedCourseCard() {
     const hasCourse = selectedCourse !== null;
     selectedCourseCard.classList.toggle("hidden", !hasCourse);
     startRoundButton.disabled = !hasCourse;
+    updateCourseActionButtons();
 
     if (!hasCourse) {
         return;
     }
 
-    const totalPar = selectedCourse.holes.reduce(function (total, hole) {
+    const roundSelection = getRoundSelection(selectedCourse);
+    const totalPar = roundSelection.holes.reduce(function (total, hole) {
         return total + hole.par;
     }, 0);
-    const totalYardage = selectedCourse.holes.reduce(function (total, hole) {
+    const totalYardage = roundSelection.holes.reduce(function (total, hole) {
         return total + (Number.isFinite(hole.yardage) ? hole.yardage : 0);
     }, 0);
     const details = [];
@@ -322,7 +465,7 @@ function updateSelectedCourseCard() {
         details.push(selectedCourse.teeName);
     }
 
-    details.push(`${selectedCourse.holes.length} holes`, `Par ${totalPar}`);
+    details.push(roundSelection.label, `Par ${totalPar}`);
 
     if (totalYardage > 0) {
         details.push(`${totalYardage.toLocaleString()} yards`);
@@ -330,6 +473,19 @@ function updateSelectedCourseCard() {
 
     selectedCourseName.textContent = selectedCourse.name;
     selectedCourseDetails.textContent = details.join(" · ");
+}
+
+function updateCourseActionButtons() {
+    const hasCourse = selectedCourse !== null;
+    favoriteCourseButton.disabled = !hasCourse;
+    favoriteCourseButton.textContent =
+        hasCourse && isFavoriteCourse(selectedCourse.id)
+            ? "★ Favorited"
+            : "☆ Favorite";
+    editCourseButton.classList.toggle(
+        "hidden",
+        !hasCourse || selectedCourse.source === "built-in"
+    );
 }
 
 async function searchCourses(event) {
@@ -498,6 +654,8 @@ function selectApiTee() {
         location: [pendingApiCourseDetail.city, pendingApiCourseDetail.state]
             .filter(Boolean)
             .join(", "),
+        latitude: Number(pendingApiCourseDetail.lat),
+        longitude: Number(pendingApiCourseDetail.lng),
         source: "opengolfapi",
         holes: holes
     };
@@ -510,17 +668,56 @@ function selectApiTee() {
     saveCourse(course);
     courseSelect.value = course.id;
     selectedCourse = course;
+    updateRoundFormatOptions();
     updateSelectedCourseCard();
     courseSearchMessage.textContent = "Course saved on this device and ready to play.";
 }
 
-function showCustomCourse() {
+function editSelectedCourse() {
+    const course = courses[courseSelect.value];
+
+    if (!isValidCourse(course) || course.source === "built-in") {
+        return;
+    }
+
+    showCustomCourse(course);
+}
+
+function showCustomCourse(course = null) {
     setupSection.classList.add("hidden");
     historySection.classList.add("hidden");
     statisticsSection.classList.add("hidden");
     roundSection.classList.add("hidden");
     customCourseSection.classList.remove("hidden");
     customCourseMessage.textContent = "";
+    customCourseForm.reset();
+
+    if (course === null) {
+        editingCourseId = null;
+        customCourseSection.querySelector("h2").textContent = "Add Custom Course";
+        document.getElementById("save-custom-course-button").textContent = "Save Course";
+        customHoleCountSelect.value = "9";
+        renderCustomHoleRows();
+    } else {
+        editingCourseId = course.id;
+        customCourseSection.querySelector("h2").textContent = "Edit Course";
+        document.getElementById("save-custom-course-button").textContent = "Save Changes";
+        customCourseNameInput.value = course.name;
+        customTeeNameInput.value = course.teeName || "Default";
+        customHoleCountSelect.value = course.holes.length >= 18 ? "18" : "9";
+        renderCustomHoleRows();
+
+        Array.from(customHoleList.querySelectorAll(".custom-hole-row"))
+            .forEach(function (row, index) {
+                const hole = course.holes[index];
+
+                if (hole !== undefined) {
+                    row.querySelector(".custom-par-input").value = hole.par;
+                    row.querySelector(".custom-yardage-input").value = hole.yardage ?? "";
+                }
+            });
+    }
+
     customCourseNameInput.focus();
 }
 
@@ -595,17 +792,23 @@ function saveCustomCourse(event) {
         return;
     }
 
+    const existingCourse = editingCourseId === null
+        ? null
+        : courses[editingCourseId];
     const course = {
-        id: `custom:${Date.now()}`,
+        ...(existingCourse ?? {}),
+        id: editingCourseId ?? `custom:${Date.now()}`,
         name: name,
         teeName: teeName,
-        source: "custom",
+        source: existingCourse?.source ?? "custom",
         holes: holes
     };
 
     saveCourse(course);
     courseSelect.value = course.id;
     selectedCourse = course;
+    editingCourseId = null;
+    updateRoundFormatOptions();
     customCourseForm.reset();
     customHoleCountSelect.value = "9";
     renderCustomHoleRows();
@@ -638,7 +841,9 @@ function saveActiveRound() {
         courseId: selectedCourse.id ?? courseSelect.value,
         course: selectedCourse,
         currentHoleIndex: currentHoleIndex,
-        roundResults: roundResults
+        roundResults: roundResults,
+        conditions: roundConditions,
+        roundToken: activeRoundToken
     };
 
     localStorage.setItem(
@@ -648,18 +853,38 @@ function saveActiveRound() {
 }
 
 function startRound() {
+    const existingRound = localStorage.getItem(ACTIVE_ROUND_KEY);
+
+    if (
+        existingRound !== null &&
+        getValidSavedRound(existingRound) !== null &&
+        !window.confirm("Starting a new round will replace the saved round. Continue?")
+    ) {
+        return;
+    }
+
     localStorage.removeItem(ACTIVE_ROUND_KEY);
 
     const selectedCourseId = courseSelect.value;
 
-    selectedCourse = courses[selectedCourseId];
+    const baseCourse = courses[selectedCourseId];
 
-    if (!isValidCourse(selectedCourse)) {
+    if (!isValidCourse(baseCourse)) {
         courseSearchMessage.textContent = "Choose a course before starting your round.";
         return;
     }
 
+    const roundSelection = getRoundSelection(baseCourse);
+    selectedCourse = {
+        ...baseCourse,
+        roundFormat: roundSelection.format,
+        roundLabel: roundSelection.label,
+        holes: roundSelection.holes
+    };
+
     currentHoleIndex = 0;
+    roundConditions = null;
+    activeRoundToken = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     roundResults = selectedCourse.holes.map(function () {
         return {
@@ -676,6 +901,7 @@ function startRound() {
     saveActiveRound();
 
     displayCurrentHole();
+    captureRoundConditions(baseCourse, activeRoundToken);
 }
 
 function displayCurrentHole() {
@@ -687,9 +913,11 @@ function displayCurrentHole() {
     holeYardageText.textContent = currentHole.yardage ?? "—";
 
     holeProgressText.textContent =
-    `Hole ${currentHole.number} of ${selectedCourse.holes.length}`;
+        `Hole ${currentHoleIndex + 1} of ${selectedCourse.holes.length}`;
 
-    courseNameText.textContent = selectedCourse.name;
+    courseNameText.textContent = selectedCourse.roundLabel
+        ? `${selectedCourse.name} · ${selectedCourse.roundLabel}`
+        : selectedCourse.name;
 
     const progressPercentage =
         ((currentHoleIndex + 1) / selectedCourse.holes.length) * 100;
@@ -718,6 +946,7 @@ function displayCurrentHole() {
 
     messageText.textContent = "";
 
+    renderRoundConditions();
     updateCurrentScore();
 }
 
@@ -810,8 +1039,22 @@ function checkForSavedRound() {
     const savedRoundText =
         localStorage.getItem(ACTIVE_ROUND_KEY);
 
-    if (savedRoundText !== null && getValidSavedRound(savedRoundText) !== null) {
-        resumeRoundButton.classList.remove("hidden");
+    const savedRound = savedRoundText === null
+        ? null
+        : getValidSavedRound(savedRoundText);
+    const hasSavedRound = savedRound !== null;
+
+    resumeRoundButton.classList.toggle("hidden", !hasSavedRound);
+    activeRoundCard.classList.toggle("hidden", !hasSavedRound);
+
+    if (hasSavedRound) {
+        const currentHole = savedRound.course.holes[savedRound.currentHoleIndex];
+        const details = [
+            savedRound.course.name,
+            savedRound.course.roundLabel,
+            `Next: Hole ${currentHole.number}`
+        ].filter(Boolean);
+        activeRoundDetails.textContent = details.join(" · ");
     }
 }
 
@@ -859,15 +1102,233 @@ function resumeSavedRound() {
     selectedCourse = savedRound.course;
     currentHoleIndex = savedRound.currentHoleIndex;
     roundResults = savedRound.roundResults;
+    roundConditions = savedRound.conditions ?? null;
+    activeRoundToken = savedRound.roundToken ??
+        `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-    courses[selectedCourse.id] = selectedCourse;
-    addCourseOption(selectedCourse);
+    if (courses[selectedCourse.id] === undefined) {
+        courses[selectedCourse.id] = selectedCourse;
+        addCourseOption(selectedCourse);
+    }
     courseSelect.value = selectedCourse.id;
 
     setupSection.classList.add("hidden");
     roundSection.classList.remove("hidden");
 
     displayCurrentHole();
+}
+
+function saveRoundAndGoHome() {
+    saveCurrentHoleWithoutValidation();
+    saveActiveRound();
+    showSetup();
+}
+
+function discardSavedRound() {
+    if (!window.confirm("Discard the saved round? This cannot be undone.")) {
+        return;
+    }
+
+    localStorage.removeItem(ACTIVE_ROUND_KEY);
+    activeRoundToken = null;
+    resumeRoundButton.classList.add("hidden");
+    activeRoundCard.classList.add("hidden");
+}
+
+function showScorecardOverview() {
+    saveCurrentHoleWithoutValidation();
+    saveActiveRound();
+    scorecardOverviewSubtitle.textContent = [
+        selectedCourse.name,
+        selectedCourse.teeName,
+        selectedCourse.roundLabel
+    ].filter(Boolean).join(" · ");
+    scorecardOverviewContent.replaceChildren();
+
+    const table = document.createElement("table");
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Hole</th>
+                <th>Par</th>
+                <th>Yards</th>
+                <th>Score</th>
+                <th>To Par</th>
+            </tr>
+        </thead>
+    `;
+    const body = document.createElement("tbody");
+
+    selectedCourse.holes.forEach(function (hole, index) {
+        const result = roundResults[index];
+        const row = document.createElement("tr");
+        const scoreToPar = result.score === null
+            ? "—"
+            : formatScoreToPar(result.score - hole.par);
+        const values = [
+            hole.number,
+            hole.par,
+            hole.yardage ?? "—",
+            result.score ?? "—",
+            scoreToPar
+        ];
+
+        if (index === currentHoleIndex) {
+            row.classList.add("current-scorecard-hole");
+        }
+
+        values.forEach(function (value) {
+            const cell = document.createElement("td");
+            cell.textContent = value;
+            row.append(cell);
+        });
+
+        row.title = `Go to hole ${hole.number}`;
+        row.addEventListener("click", function () {
+            currentHoleIndex = index;
+            scorecardOverviewDialog.close();
+            displayCurrentHole();
+        });
+        body.append(row);
+    });
+
+    table.append(body);
+    scorecardOverviewContent.append(table);
+    scorecardOverviewDialog.showModal();
+}
+
+async function captureRoundConditions(course, roundToken) {
+    roundConditionsText.textContent = "Checking current conditions…";
+
+    try {
+        const coordinates = await getCourseCoordinates(course);
+        const parameters = new URLSearchParams({
+            latitude: coordinates.latitude,
+            longitude: coordinates.longitude,
+            current: [
+                "temperature_2m",
+                "apparent_temperature",
+                "precipitation",
+                "weather_code",
+                "wind_speed_10m",
+                "wind_direction_10m"
+            ].join(","),
+            temperature_unit: "fahrenheit",
+            wind_speed_unit: "mph",
+            precipitation_unit: "inch"
+        });
+        const response = await fetch(`https://api.open-meteo.com/v1/forecast?${parameters}`);
+
+        if (!response.ok) {
+            throw new Error(`Weather returned ${response.status}.`);
+        }
+
+        const weather = await response.json();
+
+        if (weather.current === undefined) {
+            throw new Error("Current conditions were unavailable.");
+        }
+
+        if (roundToken !== activeRoundToken) {
+            return;
+        }
+
+        roundConditions = {
+            temperature: Number(weather.current.temperature_2m),
+            feelsLike: Number(weather.current.apparent_temperature),
+            precipitation: Number(weather.current.precipitation),
+            weatherCode: Number(weather.current.weather_code),
+            windSpeed: Number(weather.current.wind_speed_10m),
+            windDirection: Number(weather.current.wind_direction_10m),
+            capturedAt: new Date().toISOString()
+        };
+        renderRoundConditions();
+        saveActiveRound();
+    } catch (error) {
+        if (roundToken !== activeRoundToken) {
+            return;
+        }
+
+        console.info("Automatic round conditions were unavailable.", error);
+        roundConditionsText.textContent =
+            "Conditions unavailable — scoring will continue normally.";
+    }
+}
+
+function getCourseCoordinates(course) {
+    if (
+        Number.isFinite(course.latitude) &&
+        Number.isFinite(course.longitude) &&
+        course.latitude !== 0 &&
+        course.longitude !== 0
+    ) {
+        return Promise.resolve({
+            latitude: course.latitude,
+            longitude: course.longitude
+        });
+    }
+
+    return new Promise(function (resolve, reject) {
+        if (!("geolocation" in navigator)) {
+            reject(new Error("Location is not supported."));
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                resolve({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                });
+            },
+            reject,
+            { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+        );
+    });
+}
+
+function renderRoundConditions() {
+    if (roundConditions === null) {
+        roundConditionsText.textContent = "Checking current conditions…";
+        return;
+    }
+
+    const windDirection = getCardinalDirection(roundConditions.windDirection);
+    roundConditionsText.textContent =
+        `${getWeatherLabel(roundConditions.weatherCode)} · ` +
+        `${Math.round(roundConditions.temperature)}°F · ` +
+        `Wind ${windDirection} ${Math.round(roundConditions.windSpeed)} mph`;
+}
+
+function getCardinalDirection(degrees) {
+    if (!Number.isFinite(degrees)) {
+        return "";
+    }
+
+    const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+    return directions[Math.round(degrees / 45) % directions.length];
+}
+
+function getWeatherLabel(code) {
+    if (code === 0) return "Clear";
+    if ([1, 2, 3].includes(code)) return "Cloudy";
+    if ([45, 48].includes(code)) return "Foggy";
+    if (code >= 51 && code <= 67) return "Rain";
+    if (code >= 71 && code <= 77) return "Snow";
+    if (code >= 80 && code <= 82) return "Showers";
+    if (code >= 95) return "Thunderstorms";
+    return "Current conditions";
+}
+
+function formatConditions(conditions) {
+    if (conditions === null || conditions === undefined) {
+        return "";
+    }
+
+    return (
+        `${Math.round(conditions.temperature)}°F, ` +
+        `${Math.round(conditions.windSpeed)} mph wind`
+    );
 }
 
 function getRoundHistory() {
@@ -935,6 +1396,7 @@ function showSetup() {
     customCourseSection.classList.add("hidden");
     roundSection.classList.add("hidden");
     setupSection.classList.remove("hidden");
+    checkForSavedRound();
 }
 
 function showStatistics() {
@@ -988,6 +1450,58 @@ function renderStatistics() {
 
     renderHoleTypeStatistics(statistics.holeTypes);
     renderRecentResults(history.slice(0, 5));
+    renderPersonalBests(history);
+}
+
+function renderPersonalBests(history) {
+    const bestByCourse = new Map();
+
+    history.forEach(function (round) {
+        const roundLabel = round.roundLabel ?? `${round.holes.length} Holes`;
+        const key = [
+            round.courseId ?? round.courseName,
+            round.teeName ?? "",
+            roundLabel
+        ].join("|");
+        const currentBest = bestByCourse.get(key);
+
+        if (
+            currentBest === undefined ||
+            round.scoreToPar < currentBest.scoreToPar ||
+            (
+                round.scoreToPar === currentBest.scoreToPar &&
+                round.totalScore < currentBest.totalScore
+            )
+        ) {
+            bestByCourse.set(key, round);
+        }
+    });
+
+    personalBests.replaceChildren();
+
+    Array.from(bestByCourse.values())
+        .sort(function (first, second) {
+            return first.courseName.localeCompare(second.courseName);
+        })
+        .forEach(function (round) {
+            const row = document.createElement("div");
+            const details = document.createElement("div");
+            const course = document.createElement("strong");
+            const labels = document.createElement("span");
+            const score = document.createElement("strong");
+
+            row.className = "personal-best-row";
+            course.textContent = round.courseName;
+            labels.textContent = [
+                round.teeName,
+                round.roundLabel ?? `${round.holes.length} Holes`
+            ].filter(Boolean).join(" · ");
+            score.className = "personal-best-score";
+            score.textContent = `${round.totalScore} (${formatScoreToPar(round.scoreToPar)})`;
+            details.append(course, labels);
+            row.append(details, score);
+            personalBests.append(row);
+        });
 }
 
 function calculateStatistics(history) {
@@ -1201,7 +1715,12 @@ function createHistoryCard(round) {
     const courseName = document.createElement("h3");
     const completedDate = document.createElement("p");
     courseName.textContent = round.courseName;
-    completedDate.textContent = [round.teeName, formatRoundDate(round.completedAt)]
+    completedDate.textContent = [
+        round.teeName,
+        round.roundLabel,
+        formatConditions(round.conditions),
+        formatRoundDate(round.completedAt)
+    ]
         .filter(Boolean)
         .join(" · ");
     courseDetails.append(courseName, completedDate);
@@ -1380,6 +1899,9 @@ function finishRound() {
         courseId: courseSelect.value,
         courseName: selectedCourse.name,
         teeName: selectedCourse.teeName ?? "",
+        roundFormat: selectedCourse.roundFormat ?? "all",
+        roundLabel: selectedCourse.roundLabel ?? `${selectedCourse.holes.length} Holes`,
+        conditions: roundConditions,
         totalScore: totalScore,
         totalPar: totalPar,
         scoreToPar: totalScore - totalPar,
@@ -1399,6 +1921,7 @@ function finishRound() {
     };
 
     saveCompletedRound(completedRound);
+    activeRoundToken = null;
     localStorage.removeItem(ACTIVE_ROUND_KEY);
 
     roundSection.innerHTML = `

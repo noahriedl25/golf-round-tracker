@@ -66,6 +66,11 @@
                 <select id="tee-select"></select>
             </div>
 
+            <div id="round-format-group" class="input-group">
+                <label for="round-format-select">Round Length</label>
+                <select id="round-format-select"></select>
+            </div>
+
             <div id="selected-course-card" class="selected-course-card hidden">
                 <strong id="selected-course-name"></strong>
                 <span id="selected-course-details"></span>
@@ -82,6 +87,36 @@
             >
                 Add Custom Course
             </button>
+
+            <div class="course-action-buttons">
+                <button
+                    id="favorite-course-button"
+                    class="secondary-button"
+                    type="button"
+                >
+                    ☆ Favorite
+                </button>
+
+                <button
+                    id="edit-course-button"
+                    class="secondary-button"
+                    type="button"
+                >
+                    Edit Course
+                </button>
+            </div>
+
+            <div id="active-round-card" class="active-round-card hidden">
+                <strong>Round in Progress</strong>
+                <span id="active-round-details"></span>
+                <button
+                    id="discard-round-button"
+                    class="discard-round-button"
+                    type="button"
+                >
+                    Discard Saved Round
+                </button>
+            </div>
 
             <button
                 id="resume-round-button"
@@ -112,7 +147,10 @@
                 <a href="https://opengolfapi.org/" target="_blank" rel="noreferrer">
                     OpenGolfAPI
                 </a>
-                · ODbL 1.0
+                · ODbL 1.0 · Weather by
+                <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">
+                    Open-Meteo
+                </a>
             </p>
         </section>
 
@@ -217,6 +255,11 @@
                     <p id="trend-summary" class="trend-summary"></p>
                     <div id="recent-results"></div>
                 </div>
+
+                <div class="statistics-panel">
+                    <h3>Personal Bests</h3>
+                    <div id="personal-bests"></div>
+                </div>
             </div>
         </section>
 
@@ -277,7 +320,24 @@
         </section>
 
         <section id="round-section" class="hidden">
-            
+            <div class="round-action-buttons">
+                <button
+                    id="round-home-button"
+                    class="small-secondary-button"
+                    type="button"
+                >
+                    Save & Home
+                </button>
+
+                <button
+                    id="scorecard-overview-button"
+                    class="small-secondary-button"
+                    type="button"
+                >
+                    Scorecard
+                </button>
+            </div>
+
             <div class="progress-row">
                 <span id="hole-progress">Hole 1 of 18</span>
                 <span id="course-name"></span>
@@ -286,6 +346,10 @@
             <div class="progress-track">
                 <div id="progress-bar"></div>
             </div>
+
+            <p id="round-conditions" class="round-conditions">
+                Checking current conditions…
+            </p>
 
 <div class="round-status">
     <div>
@@ -420,6 +484,25 @@
                 </button>
             </div>
         </section>
+
+        <dialog id="scorecard-overview-dialog">
+            <div class="section-heading">
+                <div>
+                    <h2>Scorecard</h2>
+                    <p id="scorecard-overview-subtitle" class="section-subtitle"></p>
+                </div>
+
+                <button
+                    id="close-scorecard-button"
+                    class="small-secondary-button"
+                    type="button"
+                >
+                    Close
+                </button>
+            </div>
+
+            <div id="scorecard-overview-content" class="scorecard-wrapper"></div>
+        </dialog>
     </main>
 
     <script src="script.js"></script>
