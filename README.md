@@ -4,6 +4,26 @@ A web application that helps golfers analyze their rounds and identify where the
 
 ## Current Features
 
+### Use it on your phone
+
+Open **https://noahriedl25.github.io/golf-round-tracker/** on your phone.
+No Python setup or running computer is needed for this hosted version.
+
+- iPhone: Safari → Share → Add to Home Screen.
+- Android: Chrome menu → Install app (or Add to Home screen).
+- Open online once and save the course you want before playing offline.
+- Use **Find courses near me** to search a U.S. ZIP code or tap **Use My Location**.
+  Choose 10, 25, or 50 miles. ZIP distances start at the ZIP area's center.
+  The first 50 results are shown; reduce the radius if needed.
+- Search and weather need internet. Scoring, saved courses, history, editing,
+  statistics, and career reset work on the phone without Python.
+- Rounds remain in this browser/device. The phone and local Python version do
+  not automatically share data. Do not clear site data if you want to keep rounds.
+
+The home screen includes these installation instructions under a collapsible help item.
+ZIP coordinates are supplied by [Zippopotam.us](https://www.zippopotam.us/).
+Nearby course search is supplied by [OpenGolfAPI](https://www.opengolfapi.org/docs/).
+
 - Track a round one hole at a time
 - Record scores, putts, fairways, and penalties
 - Automatically save and resume an active round
@@ -62,13 +82,15 @@ not interrupt a round.
 
 ## Run the Python Version Locally
 
-Python 3.11 or newer is recommended.
+On Windows, double-click **Start Golf Tracker.cmd** in this folder.
+It starts the server and prints the address to open. Keep its window open while
+using the app. First-time setup needs Python 3.11+ and Internet access; later
+launches reuse the project's `.venv` environment.
+
+Or run this command from the project folder:
 
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r backend\requirements.txt
-python -m uvicorn backend.app:app --reload
+python run.py
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000). API documentation is
@@ -77,10 +99,18 @@ available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 Run the Python tests with:
 
 ```powershell
-python -m unittest discover -s backend\tests -v
+python run.py --test
 ```
 
 ## Python Code Guide
+
+Start with [the plain-language code walkthrough](docs/CODE_GUIDE.md).
+It explains how a button click becomes a database record, what each file does,
+and which features still need JavaScript for offline use.
+
+The statistics screen now calls Python when available. The home dashboard and
+offline screens retain local calculations. Pending database writes retry on
+reload; this local single-user version does not implement multi-device sync.
 
 - `backend/app.py` defines the API routes and serves the frontend.
 - `backend/models.py` validates the scorecard data received from JavaScript.

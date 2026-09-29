@@ -9,7 +9,7 @@
 (function () {
     const isLocalPythonServer =
         ["127.0.0.1", "localhost"].includes(window.location.hostname) &&
-        window.location.port === "8000";
+        window.location.port !== "";
     const apiRoot = window.GOLF_API_URL ?? (isLocalPythonServer ? "/api" : null);
 
     async function request(path, options = {}) {
@@ -18,6 +18,7 @@
         }
 
         const response = await fetch(`${apiRoot}${path}`, {
+            signal: AbortSignal.timeout(5000),
             headers: { "Content-Type": "application/json" },
             ...options
         });
@@ -45,6 +46,14 @@
 
         getStatistics: function () {
             return request("/statistics");
+        },
+
+        calculateStatistics: function (rounds) {
+            // POST sends data for a calculation; this route does not save it.
+            return request("/statistics/preview", {
+                method: "POST",
+                body: JSON.stringify(rounds)
+            });
         }
     };
 }());

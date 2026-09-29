@@ -1,3 +1,10 @@
+/* Browser controller: page navigation, input, and offline scoring.
+ * Python provides database storage and statistics when the local server runs.
+ * The calculation functions here are also needed on GitHub Pages and offline.
+ * Read docs/CODE_GUIDE.md for the request flow and suggested reading order.
+ */
+
+// 1. Page references: cache elements once instead of repeatedly searching HTML.
 const setupSection = document.getElementById("setup-section");
 const roundSection = document.getElementById("round-section");
 const historySection = document.getElementById("history-section");
@@ -122,6 +129,9 @@ const penaltiesMinusButton = document.getElementById("penalties-minus-button");
 const penaltiesPlusButton = document.getElementById("penalties-plus-button");
 
 const ACTIVE_ROUND_KEY = "golfTrackerActiveRound";
+const PYTHON_PENDING_KEY = "golfTrackerPythonPending";
+// A promise queue makes saves run in order, preventing older writes winning.
+let pythonSaveQueue = Promise.resolve();
 const ROUND_HISTORY_KEY = "golfTrackerRoundHistory";
 const SAVED_COURSES_KEY = "golfTrackerSavedCourses";
 const FAVORITE_COURSES_KEY = "golfTrackerFavoriteCourses";
@@ -197,6 +207,7 @@ if ("serviceWorker" in navigator && window.location.protocol !== "file:") {
 
 
 
+// 2. Built-in scorecards. Imported and custom courses use the same structure.
 const courses = {
     standard: {
         id: "standard",
@@ -250,6 +261,7 @@ const courses = {
 };
 
 function createHonEKorCourse(teeKey) {
+    // Red/White/Blue nines are layouts; teeKey chooses yardages within each nine.
     const nines = HON_E_KOR_NINE_DATA.map(function (nine) {
         return {
             id: nine.id,
@@ -280,6 +292,7 @@ function createHonEKorCourse(teeKey) {
     };
 }
 
+// 3. Current screen state. Persistent copies are saved in localStorage.
 let selectedCourse = null;
 let currentHoleIndex = 0;
 let roundResults = [];
@@ -289,6 +302,7 @@ let roundConditions = null;
 let activeRoundToken = null;
 let editingCompletedRoundId = null;
 
+// 4. Event wiring: connect each visible control to its handler.
 startRoundButton.addEventListener("click", startRound);
 courseSelect.addEventListener("change", selectSavedCourse);
 courseSearchForm.addEventListener("submit", searchCourses);
@@ -361,6 +375,7 @@ penaltiesPlusButton.addEventListener("click", function () {
     changeNumberInput(penaltiesInput, 1, 0);
 });
 
+// 5. Course management: validate stored data before displaying or playing it.
 function getSavedCourses() {
     const savedCoursesText = localStorage.getItem(SAVED_COURSES_KEY);
 
@@ -387,6 +402,7 @@ function getSavedCourses() {
 }
 
 function getFavoriteCourseIds() {
+    // Store IDs rather than duplicate course objects, so edits stay consistent.
     const favoriteText = localStorage.getItem(FAVORITE_COURSES_KEY);
 
     if (favoriteText === null) {
@@ -431,6 +447,7 @@ function toggleFavoriteCourse() {
 }
 
 function isValidCourse(course) {
+    // Storage and external API data can be missing fields; reject it early.
     return (
         course !== null &&
         typeof course === "object" &&
@@ -459,6 +476,7 @@ function loadSavedCourses() {
 }
 
 function saveCourse(course) {
+    // An existing ID means an edit; a new ID means a newly saved course.
     const savedCourses = getSavedCourses();
     const existingIndex = savedCourses.findIndex(function (savedCourse) {
         return savedCourse.id === course.id;
@@ -506,6 +524,7 @@ function selectSavedCourse() {
 }
 
 function updateRoundFormatOptions(preferredFormat) {
+    // Available choices depend on whether a course has 9, 18, or several nines.
     roundFormatSelect.replaceChildren();
 
     if (selectedCourse === null) {
@@ -560,6 +579,7 @@ function updateRoundFormatOptions(preferredFormat) {
     }
 }
 
+// Build a playable scorecard from the selected nine(s), preserving hole order.
 function getRoundSelection(course, format = roundFormatSelect.value) {
     if (format.startsWith("nine:") && Array.isArray(course.nines)) {
         const nineId = format.split(":")[1];
@@ -693,8 +713,10 @@ function updateCourseActionButtons() {
     );
 }
 
+// 6. External course API: asynchronous requests must leave scoring responsive.
 async function searchCourses(event) {
     event.preventDefault();
+    if (courseSearchButton.disabled) return;
     const query = courseSearchInput.value.trim();
 
     if (query.length < 2) {
@@ -732,6 +754,11 @@ async function searchCourses(event) {
 }
 
 function setSearchLoading(isLoading) {
+    // One search at a time prevents late ZIP/GPS results replacing a name search.
+    ["nearby-zip-button", "nearby-location-button"].forEach(function (id) {
+        const button = document.getElementById(id);
+        if (button) button.disabled = isLoading;
+    });
     courseSearchButton.disabled = isLoading;
     courseSearchButton.textContent = isLoading ? "Searching…" : "Search";
 }
@@ -757,6 +784,9 @@ function renderCourseSearchResults(results) {
         button.className = "course-result";
         name.textContent = course.course_name || course.name || "Unnamed course";
         location.textContent = [course.city, course.state].filter(Boolean).join(", ");
+        if (Number.isFinite(course.distance_mi)) {
+            location.textContent += ` · ${course.distance_mi.toFixed(1)} miles away`;
+        }
         button.append(name, location);
         button.addEventListener("click", function () {
             loadCourseDetails(course);
@@ -766,6 +796,7 @@ function renderCourseSearchResults(results) {
 }
 
 async function loadCourseDetails(searchResult) {
+    // Search results are summaries. Fetch a full record before showing tees.
     courseSearchMessage.textContent = "Loading scorecard and tee boxes…";
     teeGroup.classList.add("hidden");
 
@@ -856,6 +887,7 @@ function getTeeLabel(tee) {
 }
 
 function selectApiTee() {
+    // Translate API field names into the simpler course shape used by this app.
     if (pendingApiCourseDetail === null) {
         return;
     }
@@ -936,6 +968,7 @@ function editSelectedCourse() {
     showCustomCourse(course);
 }
 
+// The same form handles creation (null) and editing (an existing course).
 function showCustomCourse(course = null) {
     setupSection.classList.add("hidden");
     historySection.classList.add("hidden");
@@ -975,6 +1008,7 @@ function showCustomCourse(course = null) {
 }
 
 function renderCustomHoleRows() {
+    // Generate one editable row per hole instead of maintaining 18 HTML copies.
     const holeCount = Number(customHoleCountSelect.value);
     const existingRows = Array.from(customHoleList.querySelectorAll(".custom-hole-row"));
     const existingValues = existingRows.map(function (row) {
@@ -1015,6 +1049,7 @@ function renderCustomHoleRows() {
 }
 
 function saveCustomCourse(event) {
+    // Prevent the form's normal page reload; validate and save in this browser.
     event.preventDefault();
     const name = customCourseNameInput.value.trim();
     const teeName = customTeeNameInput.value.trim();
@@ -1085,6 +1120,7 @@ function changeNumberInput(input, amount, minimum) {
     }
 }
 
+// 7. Active rounds: save a snapshot after each input so navigation loses no work.
 function saveActiveRound() {
     if (selectedCourse === null) {
         return;
@@ -1158,6 +1194,7 @@ function startRound() {
 }
 
 function displayCurrentHole() {
+    // Populate controls from saved results, or use par/two putts as starting values.
     const currentHole = selectedCourse.holes[currentHoleIndex];
     const currentResult = roundResults[currentHoleIndex];
 
@@ -1187,7 +1224,7 @@ function displayCurrentHole() {
     fairwayInput.value = "na";
     } else {
     fairwayGroup.classList.remove("hidden");
-    }   
+    }
 
     previousButton.disabled = currentHoleIndex === 0;
 
@@ -1204,6 +1241,7 @@ function displayCurrentHole() {
 }
 
 function saveHoleAndContinue() {
+    // Validate before advancing; finishing the last hole creates a history entry.
     const score = Number(scoreInput.value);
     const putts = Number(puttsInput.value);
     const penalties = Number(penaltiesInput.value);
@@ -1239,6 +1277,7 @@ function saveHoleAndContinue() {
     saveActiveRound();
     displayCurrentHole();
 }
+// Draft inputs may be incomplete; strict validation happens on Save & Next.
 function saveCurrentHoleWithoutValidation() {
     const currentHole = selectedCourse.holes[currentHoleIndex];
 
@@ -1312,6 +1351,7 @@ function checkForSavedRound() {
 }
 
 function getValidSavedRound(savedRoundText) {
+    // Parse defensively so old or damaged browser data does not crash startup.
     try {
         const savedRound = JSON.parse(savedRoundText);
         const course = isValidCourse(savedRound.course)
@@ -1337,6 +1377,7 @@ function getValidSavedRound(savedRoundText) {
 }
 
 function resumeSavedRound() {
+    // Restore the course, hole index, scores, and weather from one saved snapshot.
     const savedRoundText =
         localStorage.getItem(ACTIVE_ROUND_KEY);
 
@@ -1450,6 +1491,7 @@ function showScorecardOverview() {
     scorecardOverviewDialog.showModal();
 }
 
+// 8. Weather is optional. The token prevents a late response updating a new round.
 async function captureRoundConditions(course, roundToken) {
     roundConditionsText.textContent = "Checking current conditions…";
 
@@ -1509,6 +1551,7 @@ async function captureRoundConditions(course, roundToken) {
 }
 
 function getCourseCoordinates(course) {
+    // Prefer known course coordinates; device location requires browser permission.
     if (
         Number.isFinite(course.latitude) &&
         Number.isFinite(course.longitude) &&
@@ -1584,6 +1627,7 @@ function formatConditions(conditions) {
     );
 }
 
+// 9. Completed history and career filters. Reset changes the date, not scorecards.
 function getRoundHistory() {
     const savedHistoryText = localStorage.getItem(ROUND_HISTORY_KEY);
 
@@ -1713,7 +1757,15 @@ function saveRoundHistory(history) {
     localStorage.setItem(ROUND_HISTORY_KEY, JSON.stringify(history));
 
     if (window.golfPythonApi?.enabled) {
-        window.golfPythonApi.replaceRounds(history).catch(function (error) {
+        localStorage.setItem(PYTHON_PENDING_KEY, "true");
+        const snapshot = JSON.stringify(history);
+        pythonSaveQueue = pythonSaveQueue.then(async function () {
+            await window.golfPythonApi.replaceRounds(JSON.parse(snapshot));
+            // Do not mark later edits as saved when an older request finishes.
+            if (localStorage.getItem(ROUND_HISTORY_KEY) === snapshot) {
+                localStorage.removeItem(PYTHON_PENDING_KEY);
+            }
+        }).catch(function (error) {
             // The local copy is still safe if the development server is down.
             console.warn("Rounds could not be copied to the Python API.", error);
         });
@@ -1728,6 +1780,12 @@ async function syncRoundsWithPythonBackend() {
     try {
         const localRounds = getRoundHistory();
         const serverRounds = await window.golfPythonApi.getRounds();
+
+        if (localStorage.getItem(PYTHON_PENDING_KEY) !== null) {
+            // Retry local edits before considering any older server snapshot.
+            saveRoundHistory(getRoundHistory());
+            return;
+        }
 
         if (serverRounds.length === 0 && localRounds.length > 0) {
             // First Python run: seed SQLite with the browser's existing rounds.
@@ -1770,6 +1828,7 @@ function deleteCompletedRound(roundId) {
 }
 
 function showEditCompletedRound(roundId) {
+    // Build a temporary edit form; saved history changes only after submission.
     const round = getRoundHistory().find(function (historyRound) {
         return historyRound.id === roundId;
     });
@@ -1849,6 +1908,7 @@ function createEditNumberInput(label, value, minimum) {
 }
 
 function saveEditedCompletedRound(event) {
+    // Read every row, recalculate totals, then replace the matching history item.
     event.preventDefault();
     const history = getRoundHistory();
     const roundIndex = history.findIndex(function (round) {
@@ -1905,6 +1965,7 @@ function saveEditedCompletedRound(event) {
 }
 
 function calculateCompletedRoundTotals(holes) {
+    // Offline total calculation; Python validates these totals again on receipt.
     const totals = holes.reduce(function (result, hole) {
         result.totalScore += hole.score;
         result.totalPar += hole.par;
@@ -1966,7 +2027,8 @@ function showStatistics() {
     renderStatistics();
 }
 
-function renderStatistics() {
+// 10. Statistics rendering. Use Python online and browser calculations offline.
+async function renderStatistics() {
     const history = getCareerHistory();
     const hasRounds = history.length > 0;
     const careerStart = getCareerStart();
@@ -1992,7 +2054,22 @@ function renderStatistics() {
         return;
     }
 
-    const statistics = calculateStatistics(history);
+    let statistics;
+    let handicap;
+    try {
+        if (!window.golfPythonApi?.enabled) {
+            throw new Error("Offline calculation mode");
+        }
+        statistics = await window.golfPythonApi.calculateStatistics(history);
+        handicap = statistics.handicap;
+    } catch {
+        statistics = calculateStatistics(history);
+        handicap = calculateHandicapEstimate(history);
+    }
+    // A reset/edit during the request makes its result obsolete.
+    if (JSON.stringify(history) !== JSON.stringify(getCareerHistory())) {
+        return renderStatistics();
+    }
 
     totalRoundsStat.textContent = statistics.totalRounds;
     averageScoreStat.textContent = formatGroupedAverage(
@@ -2014,7 +2091,6 @@ function renderStatistics() {
         "totalPenalties"
     );
 
-    const handicap = calculateHandicapEstimate(history);
     handicapEstimateStat.textContent = handicap.value === null
         ? "—"
         : handicap.value.toFixed(1);
@@ -2033,6 +2109,7 @@ function renderStatistics() {
 }
 
 function renderHomeDashboard() {
+    // Render instantly from local history, including when Python is unreachable.
     const careerHistory = getCareerHistory();
     const allHistory = getRoundHistory();
     const handicap = calculateHandicapEstimate(careerHistory);
@@ -2095,6 +2172,7 @@ function formatDateOnly(dateText) {
     return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
 }
 
+// Offline equivalent of backend/statistics.py. Keep both algorithms consistent.
 function calculateHandicapEstimate(history) {
     const differentials = history
         .slice(0, 20)
@@ -2184,6 +2262,7 @@ function calculateEstimatedDifferential(round) {
 }
 
 function renderPersonalBests(history) {
+    // Each course/tee/nine combination gets its own record rather than one global best.
     const bestByCourse = new Map();
 
     history.forEach(function (round) {
@@ -2235,6 +2314,7 @@ function renderPersonalBests(history) {
 }
 
 function calculateStatistics(history) {
+    // Offline grouping mirrors Python's dashboard_statistics function.
     let totalScore = 0;
     let totalToPar = 0;
     let totalPutts = 0;
@@ -2343,6 +2423,7 @@ function renderHoleTypeStatistics(holeTypes) {
 }
 
 function renderRecentResults(recentRounds) {
+    // Compare strokes over par per hole to account for different round lengths.
     recentResults.replaceChildren();
 
     const chronologicalRounds = [...recentRounds].reverse();
@@ -2394,6 +2475,7 @@ function formatAverage(value) {
 }
 
 function formatGroupedAverage(roundLengths, property, formatToPar = false) {
+    // Show separate 9H and 18H labels so mixed rounds do not create misleading averages.
     return Object.keys(roundLengths)
         .map(Number)
         .sort(function (first, second) {
@@ -2421,6 +2503,7 @@ function formatAverageToPar(value) {
     return roundedValue > 0 ? `+${roundedValue}` : String(roundedValue);
 }
 
+// 11. DOM builders: textContent inserts text safely, including course names.
 function renderRoundHistory() {
     const history = getRoundHistory();
 
@@ -2512,6 +2595,7 @@ function createStat(label, value) {
 }
 
 function createScorecard(holes) {
+    // Build table cells as text nodes so imported course data cannot become HTML.
     const wrapper = document.createElement("div");
     wrapper.className = "scorecard-wrapper";
 
@@ -2612,6 +2696,7 @@ function updateCurrentScore() {
     }
 }
 
+// 12. Finalize: add hole totals, store the scorecard, then clear the active draft.
 function finishRound() {
     let totalScore = 0;
     let totalPar = 0;

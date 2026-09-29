@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+import sqlite3
 from pathlib import Path
 
 from backend.database import RoundDatabase
@@ -14,6 +15,12 @@ def sample_round(round_id: str) -> dict:
 
 
 class RoundDatabaseTests(unittest.TestCase):
+    def test_failed_replace_preserves_existing_history(self) -> None:
+        self.database.save_round(sample_round("original"))
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.database.replace_rounds([sample_round("duplicate"), sample_round("duplicate")])
+        self.assertEqual(self.database.list_rounds()[0]["id"], "original")
+
     def setUp(self) -> None:
         self.temporary_directory = tempfile.TemporaryDirectory()
         database_path = Path(self.temporary_directory.name) / "test.db"

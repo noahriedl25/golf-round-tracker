@@ -1,10 +1,12 @@
-const CACHE_NAME = "golf-round-tracker-v6";
+// Bump the version when app assets change so installed copies refresh together.
+const CACHE_NAME = "golf-round-tracker-v8";
 const APP_FILES = [
     "./",
     "./index.html",
     "./style.css",
     "./api-client.js",
     "./script.js",
+    "./nearby-courses.js",
     "./manifest.webmanifest",
     "./icons/icon-180.png",
     "./icons/icon-192.png",
@@ -12,6 +14,7 @@ const APP_FILES = [
 ];
 
 self.addEventListener("install", function (event) {
+    // Download the public shell once, allowing later rounds without a network.
     event.waitUntil(
         caches.open(CACHE_NAME).then(function (cache) {
             return cache.addAll(APP_FILES);
@@ -22,6 +25,7 @@ self.addEventListener("install", function (event) {
 });
 
 self.addEventListener("activate", function (event) {
+    // Retire earlier versions after the new shell has installed successfully.
     event.waitUntil(
         caches.keys().then(function (cacheNames) {
             return Promise.all(
@@ -40,6 +44,7 @@ self.addEventListener("activate", function (event) {
 });
 
 self.addEventListener("fetch", function (event) {
+    // Network first, cached files second. Never cache mutable API responses.
     const requestUrl = new URL(event.request.url);
 
     if (

@@ -29,6 +29,7 @@
             <p>By: Noah Riedl</p>
         </header>
 
+        <!-- Home screen: the IDs connect these controls to script.js. -->
         <section id="setup-section">
             <div class="home-heading">
                 <div>
@@ -77,6 +78,15 @@
 
             <h3 class="start-round-heading">Start a Round</h3>
 
+            <details class="phone-help">
+                <summary>Use this app on your phone</summary>
+                <p>iPhone: open this site in Safari, tap Share, then Add to Home Screen.
+                Android: open in Chrome, then choose Install app or Add to Home screen from the menu.</p>
+                <p>Open the app online once and save your course before heading out.
+                Scoring works offline. Course search and weather need internet.
+                Rounds stay on this phone; they do not sync to other devices.</p>
+            </details>
+
             <form id="course-search-form" class="course-search-form">
                 <label for="course-search-input">Search U.S. Courses</label>
 
@@ -94,7 +104,27 @@
                 </div>
             </form>
 
-            <p id="course-search-message" class="course-search-message"></p>
+            <!-- ZIP and GPS both become coordinates for the same nearby search. -->
+            <details class="nearby-search">
+                <summary>Find courses near me</summary>
+                <form id="nearby-course-form">
+                    <label for="nearby-zip">U.S. ZIP code</label>
+                    <input id="nearby-zip" inputmode="numeric" autocomplete="postal-code"
+                           placeholder="Example: 53040" maxlength="5" pattern="[0-9]{5}" required>
+                    <label for="nearby-radius">Search within</label>
+                    <select id="nearby-radius">
+                        <option value="10">10 miles</option>
+                        <option value="25" selected>25 miles</option>
+                        <option value="50">50 miles</option>
+                    </select>
+                    <button id="nearby-zip-button" type="submit">Search by ZIP</button>
+                </form>
+                <button id="nearby-location-button" type="button" class="secondary-button">Use My Location</button>
+                <small>ZIP lookups use Zippopotam.us. Location searches send coordinates to
+                OpenGolfAPI to find courses. Your search location is not saved.</small>
+            </details>
+
+            <p id="course-search-message" class="course-search-message" role="status" aria-live="polite"></p>
             <div id="course-search-results" class="course-search-results"></div>
 
             <div class="setup-divider"><span>or</span></div>
@@ -187,6 +217,7 @@
             </p>
         </section>
 
+        <!-- Only one main screen is visible at a time. History rows are built in JS. -->
         <section id="history-section" class="hidden">
             <div class="section-heading">
                 <div>
@@ -210,6 +241,7 @@
             <div id="history-list"></div>
         </section>
 
+        <!-- Python supplies statistics locally; browser calculations support offline use. -->
         <section id="statistics-section" class="hidden">
             <div class="section-heading">
                 <div>
@@ -337,6 +369,7 @@
             </div>
         </section>
 
+        <!-- Shared add/edit form. Hole inputs are generated from the hole count. -->
         <section id="custom-course-section" class="hidden">
             <div class="section-heading">
                 <div>
@@ -393,6 +426,7 @@
             </form>
         </section>
 
+        <!-- Active round: each input change saves a draft on this device. -->
         <section id="round-section" class="hidden">
             <div class="round-action-buttons">
                 <button
@@ -440,7 +474,7 @@
         <span class="status-label">Yards</span>
         <strong id="hole-yardage">375</strong>
     </div>
-</div> 
+</div>
 
             <div class="score-summary">
                 <span>Current Score</span>
@@ -606,5 +640,6 @@
 
     <script src="api-client.js"></script>
     <script src="script.js"></script>
+    <script src="nearby-courses.js"></script>
 </body>
 </html>

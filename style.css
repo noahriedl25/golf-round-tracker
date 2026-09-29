@@ -1,8 +1,23 @@
+/* Layout starts with a narrow, phone-friendly column. The remaining rules
+   style shared controls, scorecards, statistics, and dialogs in that order. */
 * {
     box-sizing: border-box;
 }
 
+/* Collapsible help keeps the normal scoring screen short on a phone. */
+.phone-help, .nearby-search {
+    margin: 16px 0;
+    padding: 14px;
+    border: 1px solid #cbd5cf;
+    border-radius: 10px;
+}
+summary { cursor: pointer; font-weight: bold; min-height: 32px; }
+.nearby-search form { margin-top: 12px; }
+.nearby-search label { margin-top: 12px; }
+.nearby-search small { display: block; line-height: 1.5; margin-top: 12px; }
+
 body {
+    /* Safe-area padding keeps controls clear of phone notches and home bars. */
     margin: 0;
     min-height: 100vh;
     min-height: 100dvh;
@@ -44,6 +59,7 @@ section {
 }
 
 .hidden {
+    /* JavaScript switches screens by adding/removing this class. */
     display: none;
 }
 
@@ -109,6 +125,7 @@ button:disabled {
 }
 
 .home-statistics-grid {
+    /* Equal columns make the three career figures easy to scan. */
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
@@ -185,6 +202,7 @@ button:disabled {
 }
 
 .search-control {
+    /* The text field can shrink while the search button remains reachable. */
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 8px;
@@ -282,6 +300,7 @@ button:disabled {
 
 .custom-hole-heading,
 .custom-hole-row {
+    /* Matching grid columns align headings with the generated hole inputs. */
     display: grid;
     grid-template-columns: 48px 1fr 1fr;
     gap: 8px;

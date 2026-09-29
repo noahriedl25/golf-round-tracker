@@ -6,8 +6,9 @@ Pydantic aliases let each side use the naming style that feels natural.
 """
 
 from typing import Any
+from math import floor
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ApiModel(BaseModel):
@@ -17,16 +18,18 @@ class ApiModel(BaseModel):
 
 
 class HoleResult(ApiModel):
-    number: int
-    par: int
+    """One completed hole; negative scores and counts are invalid."""
+    number: int = Field(ge=1)
+    par: int = Field(ge=1)
     yardage: int | None = None
-    score: int
-    putts: int
+    score: int = Field(ge=1)
+    putts: int = Field(ge=0)
     fairway: str | None = None
-    penalties: int = 0
+    penalties: int = Field(default=0, ge=0)
 
 
 class CompletedRound(ApiModel):
+    """Metadata plus hole results and the totals used by existing scorecards."""
     id: str
     completed_at: str = Field(alias="completedAt")
     course_id: str | None = Field(default=None, alias="courseId")
@@ -45,7 +48,28 @@ class CompletedRound(ApiModel):
     fairways_hit: int = Field(alias="fairwaysHit")
     fairway_opportunities: int = Field(alias="fairwayOpportunities")
     fairway_percentage: int = Field(alias="fairwayPercentage")
-    holes: list[HoleResult]
+    holes: list[HoleResult] = Field(min_length=1, max_length=18)
+
+    @model_validator(mode="after")
+    def calculate_totals(self):
+        """Derive totals from the holes instead of trusting submitted totals.
+
+        This runs after validation for both storage and statistics requests.
+        Editing a hole therefore cannot leave stale totals in the database.
+        """
+        self.total_score = sum(hole.score for hole in self.holes)
+        self.total_par = sum(hole.par for hole in self.holes)
+        self.score_to_par = self.total_score - self.total_par
+        self.total_putts = sum(hole.putts for hole in self.holes)
+        self.total_penalties = sum(hole.penalties for hole in self.holes)
+        fairway_holes = [hole for hole in self.holes if hole.par != 3]
+        self.fairway_opportunities = len(fairway_holes)
+        self.fairways_hit = sum(hole.fairway == "hit" for hole in fairway_holes)
+        self.fairway_percentage = (
+            floor(self.fairways_hit / self.fairway_opportunities * 100 + 0.5)
+            if self.fairway_opportunities else 0
+        )
+        return self
 
     def as_browser_json(self) -> dict[str, Any]:
         """Return a dictionary with the field names expected by JavaScript."""

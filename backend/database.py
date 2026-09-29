@@ -12,12 +12,14 @@ from typing import Any
 
 
 class RoundDatabase:
+    """Own the path, but open a fresh connection for each operation."""
     def __init__(self, database_path: Path) -> None:
         self.database_path = database_path
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._create_tables()
 
     def _connect(self) -> sqlite3.Connection:
+        # SQLite connections cannot be shared freely between request threads.
         connection = sqlite3.connect(self.database_path)
         connection.row_factory = sqlite3.Row
         return connection
@@ -39,6 +41,7 @@ class RoundDatabase:
             connection.close()
 
     def list_rounds(self) -> list[dict[str, Any]]:
+        """Decode each saved JSON document back into a Python dictionary."""
         connection = self._connect()
         try:
             rows = connection.execute(
@@ -49,6 +52,8 @@ class RoundDatabase:
         return [json.loads(row["round_json"]) for row in rows]
 
     def save_round(self, round_data: dict[str, Any]) -> None:
+        """Insert a new round or replace the data for a matching ID."""
+        # Question marks bind values safely; never join user text into SQL.
         connection = self._connect()
         try:
             connection.execute(
@@ -70,6 +75,7 @@ class RoundDatabase:
             connection.close()
 
     def delete_round(self, round_id: str) -> bool:
+        """Return whether a row was deleted, letting the route choose 204/404."""
         connection = self._connect()
         try:
             cursor = connection.execute(
@@ -91,6 +97,7 @@ class RoundDatabase:
         connection = self._connect()
         try:
             connection.execute("DELETE FROM rounds")
+            # Nothing is permanent until commit. close() rolls back on failure.
             connection.executemany(
                 """
                 INSERT INTO rounds (id, completed_at, round_json)

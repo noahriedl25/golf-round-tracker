@@ -1,7 +1,8 @@
 import unittest
 
 from backend.models import CompletedRound
-from backend.statistics import estimated_differential, handicap_estimate, round_summary
+from backend.statistics import estimated_differential, handicap_estimate, round_summary, dashboard_statistics
+from pydantic import ValidationError
 
 
 def make_even_par_round(round_number: int) -> CompletedRound:
@@ -40,6 +41,33 @@ def make_even_par_round(round_number: int) -> CompletedRound:
 
 
 class StatisticsTests(unittest.TestCase):
+    def test_edited_hole_recalculates_stale_totals(self) -> None:
+        data = make_even_par_round(1).as_browser_json()
+        data["holes"][0]["score"] = 6
+        corrected = CompletedRound.model_validate(data)
+        self.assertEqual(corrected.total_score, 38)
+        self.assertEqual(corrected.score_to_par, 2)
+
+    def test_empty_dashboard_has_no_best_round(self) -> None:
+        self.assertIsNone(dashboard_statistics([])["bestRound"])
+
+    def test_dashboard_separates_round_lengths(self) -> None:
+        nine = make_even_par_round(1)
+        eighteen = make_even_par_round(2)
+        eighteen.holes = eighteen.holes * 2
+        eighteen.total_score = 72
+        eighteen.total_par = 72
+        result = dashboard_statistics([nine, eighteen])
+        self.assertEqual(result["roundLengths"][9]["totalScore"], 36)
+        self.assertEqual(result["roundLengths"][18]["totalScore"], 72)
+        self.assertEqual(result["holeTypes"][3]["holes"], 6)
+
+    def test_empty_scorecard_is_rejected(self) -> None:
+        data = make_even_par_round(1).as_browser_json()
+        data["holes"] = []
+        with self.assertRaises(ValidationError):
+            CompletedRound.model_validate(data)
+
     def test_even_par_nine_has_zero_differential(self) -> None:
         self.assertEqual(estimated_differential(make_even_par_round(1)), 0.0)
 

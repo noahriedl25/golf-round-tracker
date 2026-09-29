@@ -6,6 +6,7 @@ to understand and test.
 """
 
 from statistics import mean
+from math import floor
 from typing import Any
 
 from .models import CompletedRound
@@ -38,7 +39,7 @@ def estimated_differential(round_data: CompletedRound) -> float | None:
     )
     slope_rating = round_data.slope_rating if is_rated_eighteen else 113
     differential = (113 / slope_rating) * (adjusted_score - course_rating)
-    return round(differential, 1)
+    return floor(differential * 10 + 0.5) / 10
 
 
 def handicap_estimate(rounds: list[CompletedRound]) -> dict[str, Any]:
@@ -47,11 +48,11 @@ def handicap_estimate(rounds: list[CompletedRound]) -> dict[str, Any]:
     recent_rounds = sorted(
         rounds, key=lambda item: item.completed_at, reverse=True
     )[:20]
-    differentials = [
-        differential
-        for round_data in recent_rounds
-        if (differential := estimated_differential(round_data)) is not None
-    ]
+    differentials = []
+    for round_data in recent_rounds:
+        differential = estimated_differential(round_data)
+        if differential is not None:
+            differentials.append(differential)
     differentials.sort()
     count = len(differentials)
 
@@ -82,7 +83,9 @@ def handicap_estimate(rounds: list[CompletedRound]) -> dict[str, Any]:
     else:
         used, adjustment = 8, 0
 
-    value = min(54, round(mean(differentials[:used]) + adjustment, 1))
+    # Match JavaScript's rounding so online and offline estimates agree.
+    average = mean(differentials[:used]) + adjustment
+    value = min(54, floor(average * 10 + 0.5) / 10)
     return {"value": value, "differentialCount": count, "usedDifferentials": used}
 
 
@@ -117,5 +120,52 @@ def round_summary(rounds: list[CompletedRound]) -> dict[str, Any]:
         "penaltiesPerRound": round(
             mean(item.total_penalties for item in rounds), 1
         ),
+        "handicap": handicap_estimate(rounds),
+    }
+
+
+def dashboard_statistics(rounds: list[CompletedRound]) -> dict[str, Any]:
+    """Return the same field names used by the browser's statistics view.
+
+    Keep nine-hole and eighteen-hole averages separate: averaging a 36 with
+    a 72 would otherwise produce a misleading score of 54.
+    """
+    lengths = {}
+    hole_types = {par: {"strokes": 0, "holes": 0} for par in (3, 4, 5)}
+    hits = 0
+    opportunities = 0
+    for round_data in rounds:
+        count = len(round_data.holes)
+        if count not in lengths:
+            lengths[count] = {
+                "rounds": 0, "totalScore": 0, "scoreToPar": 0,
+                "totalPutts": 0, "totalPenalties": 0,
+            }
+        group = lengths[count]
+        group["rounds"] += 1
+        group["totalScore"] += round_data.total_score
+        group["scoreToPar"] += round_data.score_to_par
+        group["totalPutts"] += round_data.total_putts
+        group["totalPenalties"] += round_data.total_penalties
+        hits += round_data.fairways_hit
+        opportunities += round_data.fairway_opportunities
+        for hole in round_data.holes:
+            if hole.par in hole_types:
+                hole_types[hole.par]["strokes"] += hole.score
+                hole_types[hole.par]["holes"] += 1
+
+    # Compare strokes over par per hole so different round lengths are fair.
+    best = min(
+        rounds,
+        key=lambda item: (item.score_to_par / len(item.holes), item.total_score),
+        default=None,
+    )
+    return {
+        "totalRounds": len(rounds),
+        "roundLengths": lengths,
+        "holeTypes": hole_types,
+        "fairwayPercentage": floor(hits / opportunities * 100 + 0.5)
+        if opportunities else 0,
+        "bestRound": best.as_browser_json() if best else None,
         "handicap": handicap_estimate(rounds),
     }
