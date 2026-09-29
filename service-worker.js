@@ -1,8 +1,9 @@
-const CACHE_NAME = "golf-round-tracker-v5";
+const CACHE_NAME = "golf-round-tracker-v6";
 const APP_FILES = [
     "./",
     "./index.html",
     "./style.css",
+    "./api-client.js",
     "./script.js",
     "./manifest.webmanifest",
     "./icons/icon-180.png",
@@ -39,7 +40,12 @@ self.addEventListener("activate", function (event) {
 });
 
 self.addEventListener("fetch", function (event) {
-    if (event.request.method !== "GET") {
+    const requestUrl = new URL(event.request.url);
+
+    if (
+        event.request.method !== "GET" ||
+        requestUrl.pathname.startsWith("/api/")
+    ) {
         return;
     }
 

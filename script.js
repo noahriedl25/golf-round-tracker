@@ -335,6 +335,7 @@ selectSavedCourse();
 renderCustomHoleRows();
 checkForSavedRound();
 renderHomeDashboard();
+syncRoundsWithPythonBackend();
 
 scoreMinusButton.addEventListener("click", function () {
     changeNumberInput(scoreInput, -1, 1);
@@ -1710,6 +1711,39 @@ function saveCompletedRound(round) {
 
 function saveRoundHistory(history) {
     localStorage.setItem(ROUND_HISTORY_KEY, JSON.stringify(history));
+
+    if (window.golfPythonApi?.enabled) {
+        window.golfPythonApi.replaceRounds(history).catch(function (error) {
+            // The local copy is still safe if the development server is down.
+            console.warn("Rounds could not be copied to the Python API.", error);
+        });
+    }
+}
+
+async function syncRoundsWithPythonBackend() {
+    if (!window.golfPythonApi?.enabled) {
+        return;
+    }
+
+    try {
+        const localRounds = getRoundHistory();
+        const serverRounds = await window.golfPythonApi.getRounds();
+
+        if (serverRounds.length === 0 && localRounds.length > 0) {
+            // First Python run: seed SQLite with the browser's existing rounds.
+            await window.golfPythonApi.replaceRounds(localRounds);
+            return;
+        }
+
+        if (serverRounds.length > 0) {
+            // SQLite is the source of truth while running through FastAPI.
+            localStorage.setItem(ROUND_HISTORY_KEY, JSON.stringify(serverRounds));
+            renderHomeDashboard();
+        }
+    } catch (error) {
+        // Offline scoring should never depend on the optional Python server.
+        console.warn("Using offline round history because Python is unavailable.", error);
+    }
 }
 
 function deleteCompletedRound(roundId) {

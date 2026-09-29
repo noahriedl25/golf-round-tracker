@@ -40,6 +40,53 @@ official Handicap Index.
 - HTML
 - CSS
 - JavaScript
+- Python
+- FastAPI
+- SQLite
+
+## Why the Project Uses Both JavaScript and Python
+
+The browser-facing parts remain in JavaScript because score entry, offline
+storage, phone installation, and future GPS features run in the browser.
+The optional Python backend provides:
+
+- validated round data models
+- permanent SQLite round storage
+- REST endpoints for creating, editing, listing, and deleting rounds
+- reusable career-statistics and handicap-estimate calculations
+
+The GitHub Pages version still works entirely offline with `localStorage`.
+When the project is run through FastAPI, completed rounds are synchronized to
+SQLite as well. This local-first design means losing a network connection does
+not interrupt a round.
+
+## Run the Python Version Locally
+
+Python 3.11 or newer is recommended.
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r backend\requirements.txt
+python -m uvicorn backend.app:app --reload
+```
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). API documentation is
+available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+
+Run the Python tests with:
+
+```powershell
+python -m unittest discover -s backend\tests -v
+```
+
+## Python Code Guide
+
+- `backend/app.py` defines the API routes and serves the frontend.
+- `backend/models.py` validates the scorecard data received from JavaScript.
+- `backend/database.py` contains the small SQLite data-access layer.
+- `backend/statistics.py` contains pure calculation functions.
+- `backend/tests/` contains examples showing how the calculations behave.
 
 ## Install on a Phone
 
