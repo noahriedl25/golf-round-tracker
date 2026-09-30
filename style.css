@@ -4,6 +4,46 @@
     box-sizing: border-box;
 }
 
+/* Page shell: compact navigation and wider desktop workspaces. */
+body { background: #f4f5ef; }
+body main { max-width: 1060px; width: calc(100% - 40px); margin: 24px auto; }
+.app-header { display: flex; align-items: center; gap: 12px; }
+.app-header h1 { font-size: 20px; margin: 0; letter-spacing: -0.6px; }
+.brand-mark { font-size: 28px; }
+.brand-caption { margin-left: auto; font-size: 11px; letter-spacing: 2px; color: #637464; }
+.primary-nav { display: flex; gap: 6px; padding: 6px; margin-bottom: 24px; background: #e4eadd; border-radius: 14px; }
+.primary-nav button { flex: 1; background: transparent; color: #405544; min-height: 46px; }
+.primary-nav button[aria-current="page"] { background: #183f30; color: white; box-shadow: 0 3px 8px #163e3020; }
+body section { padding: 30px; border: 1px solid #dde5d8; box-shadow: none; border-radius: 20px; }
+.eyebrow { font-size: 11px; font-weight: bold; letter-spacing: 2px; color: #60794e; }
+#home-section .home-heading { padding: 18px 0; }
+#home-section h2 { font-size: clamp(28px, 4vw, 44px); letter-spacing: -1.5px; max-width: 580px; color: #183f30; }
+#home-section .home-statistics-grid { gap: 14px; }
+#home-section .home-statistics-grid div { padding: 20px 12px; text-align: left; border: 1px solid #dce5d5; background: #f3f6ed; }
+#home-section .home-statistics-grid strong { font-size: 30px; }
+.home-actions { display: flex; gap: 12px; margin: 24px 0 12px; }
+.home-actions button { flex: 1; min-height: 50px; }
+.home-actions .secondary-button { margin: 0; }
+.course-layout { display: grid; grid-template-columns: 1.15fr 1fr; gap: 30px; align-items: start; }
+.course-preparation { background: #f4f7f0; padding: 22px; border-radius: 16px; }
+.course-preparation h3 { margin-top: 0; }
+.course-search-results { max-height: 360px; overflow-y: auto; }
+#round-section, #custom-course-section { max-width: 650px; margin: auto; }
+#statistics-section .statistics-grid { grid-template-columns: repeat(4, 1fr); }
+button:focus-visible, summary:focus-visible { outline: 3px solid #9ab65e; outline-offset: 3px; }
+@media (max-width: 640px) {
+    body main { width: calc(100% - 24px); margin: 16px auto 100px; }
+    body section { padding: 20px; border-radius: 16px; }
+    .brand-caption { display: none; }
+    .primary-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; margin: 0; border-radius: 18px 18px 0 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px #183f3018; }
+    .course-layout { grid-template-columns: 1fr; gap: 20px; }
+    .home-actions { flex-direction: column; }
+    #home-section .home-statistics-grid { gap: 6px; }
+    #home-section .home-statistics-grid div { padding: 14px 8px; }
+    #home-section .home-statistics-grid strong { font-size: 25px; }
+    #statistics-section .statistics-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
 /* Collapsible help keeps the normal scoring screen short on a phone. */
 .phone-help, .nearby-search {
     margin: 16px 0;

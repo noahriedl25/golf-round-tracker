@@ -12,6 +12,31 @@ from typing import Any
 from .models import CompletedRound
 
 
+def completion_date(round_data: CompletedRound) -> str:
+    """Provide the stored timestamp used by sorted(), like a Java sort key."""
+    return round_data.completed_at
+
+
+def find_best_round(rounds: list[CompletedRound]) -> CompletedRound | None:
+    """Compare strokes over par per hole, then total score to break ties."""
+    best = None
+    for candidate in rounds:
+        if best is None:
+            best = candidate
+            continue
+
+        candidate_average = candidate.score_to_par / len(candidate.holes)
+        best_average = best.score_to_par / len(best.holes)
+        if candidate_average < best_average:
+            best = candidate
+        elif candidate_average == best_average:
+            if candidate.total_score < best.total_score:
+                best = candidate
+
+    # An empty list returns None. Exact ties keep the first round encountered.
+    return best
+
+
 def estimated_differential(round_data: CompletedRound) -> float | None:
     """Calculate one unofficial score differential.
 
@@ -32,12 +57,12 @@ def estimated_differential(round_data: CompletedRound) -> float | None:
     )
 
     adjusted_score = round_data.total_score * hole_factor
-    course_rating = (
-        round_data.course_rating
-        if is_rated_eighteen
-        else round_data.total_par * hole_factor
-    )
-    slope_rating = round_data.slope_rating if is_rated_eighteen else 113
+    if is_rated_eighteen:
+        course_rating = round_data.course_rating
+        slope_rating = round_data.slope_rating
+    else:
+        course_rating = round_data.total_par * hole_factor
+        slope_rating = 113
     differential = (113 / slope_rating) * (adjusted_score - course_rating)
     return floor(differential * 10 + 0.5) / 10
 
@@ -45,9 +70,9 @@ def estimated_differential(round_data: CompletedRound) -> float | None:
 def handicap_estimate(rounds: list[CompletedRound]) -> dict[str, Any]:
     """Return an unofficial handicap estimate from up to 20 recent rounds."""
 
-    recent_rounds = sorted(
-        rounds, key=lambda item: item.completed_at, reverse=True
-    )[:20]
+    # Sort a copy; do not rearrange the caller's history list.
+    newest_first = sorted(rounds, key=completion_date, reverse=True)
+    recent_rounds = newest_first[:20]
     differentials = []
     for round_data in recent_rounds:
         differential = estimated_differential(round_data)
@@ -90,7 +115,7 @@ def handicap_estimate(rounds: list[CompletedRound]) -> dict[str, Any]:
 
 
 def round_summary(rounds: list[CompletedRound]) -> dict[str, Any]:
-    """Build the main career statistics shown by the application."""
+    """Build the simple API summary; the UI uses dashboard_statistics instead."""
 
     if not rounds:
         return {
@@ -103,23 +128,32 @@ def round_summary(rounds: list[CompletedRound]) -> dict[str, Any]:
             "handicap": handicap_estimate([]),
         }
 
-    fairways_hit = sum(round_data.fairways_hit for round_data in rounds)
-    opportunities = sum(
-        round_data.fairway_opportunities for round_data in rounds
-    )
-    fairway_percentage = (
-        round((fairways_hit / opportunities) * 100) if opportunities else 0
-    )
+    total_score = 0
+    total_to_par = 0
+    total_putts = 0
+    total_penalties = 0
+    fairways_hit = 0
+    opportunities = 0
+    for round_data in rounds:
+        total_score += round_data.total_score
+        total_to_par += round_data.score_to_par
+        total_putts += round_data.total_putts
+        total_penalties += round_data.total_penalties
+        fairways_hit += round_data.fairways_hit
+        opportunities += round_data.fairway_opportunities
+
+    fairway_percentage = 0
+    if opportunities > 0:
+        fairway_percentage = round(fairways_hit / opportunities * 100)
+    round_count = len(rounds)
 
     return {
-        "roundCount": len(rounds),
-        "averageScore": round(mean(item.total_score for item in rounds), 1),
-        "averageToPar": round(mean(item.score_to_par for item in rounds), 1),
-        "averagePutts": round(mean(item.total_putts for item in rounds), 1),
+        "roundCount": round_count,
+        "averageScore": round(total_score / round_count, 1),
+        "averageToPar": round(total_to_par / round_count, 1),
+        "averagePutts": round(total_putts / round_count, 1),
         "fairwayPercentage": fairway_percentage,
-        "penaltiesPerRound": round(
-            mean(item.total_penalties for item in rounds), 1
-        ),
+        "penaltiesPerRound": round(total_penalties / round_count, 1),
         "handicap": handicap_estimate(rounds),
     }
 
@@ -131,7 +165,9 @@ def dashboard_statistics(rounds: list[CompletedRound]) -> dict[str, Any]:
     a 72 would otherwise produce a misleading score of 54.
     """
     lengths = {}
-    hole_types = {par: {"strokes": 0, "holes": 0} for par in (3, 4, 5)}
+    hole_types = {}
+    for par in (3, 4, 5):
+        hole_types[par] = {"strokes": 0, "holes": 0}
     hits = 0
     opportunities = 0
     for round_data in rounds:
@@ -155,17 +191,19 @@ def dashboard_statistics(rounds: list[CompletedRound]) -> dict[str, Any]:
                 hole_types[hole.par]["holes"] += 1
 
     # Compare strokes over par per hole so different round lengths are fair.
-    best = min(
-        rounds,
-        key=lambda item: (item.score_to_par / len(item.holes), item.total_score),
-        default=None,
-    )
+    best = find_best_round(rounds)
+    best_json = None
+    if best is not None:
+        best_json = best.as_browser_json()
+
+    fairway_percentage = 0
+    if opportunities > 0:
+        fairway_percentage = floor(hits / opportunities * 100 + 0.5)
     return {
         "totalRounds": len(rounds),
         "roundLengths": lengths,
         "holeTypes": hole_types,
-        "fairwayPercentage": floor(hits / opportunities * 100 + 0.5)
-        if opportunities else 0,
-        "bestRound": best.as_browser_json() if best else None,
+        "fairwayPercentage": fairway_percentage,
+        "bestRound": best_json,
         "handicap": handicap_estimate(rounds),
     }

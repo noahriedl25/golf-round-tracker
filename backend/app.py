@@ -73,14 +73,19 @@ def delete_round(round_id: str) -> Response:
 @app.put("/api/rounds")
 def replace_rounds(rounds: list[CompletedRound]) -> dict[str, int]:
     """Save one browser's history atomically; this is a single-user app."""
-    browser_rounds = [round_data.as_browser_json() for round_data in rounds]
+    browser_rounds = []
+    for round_data in rounds:
+        browser_rounds.append(round_data.as_browser_json())
     database.replace_rounds(browser_rounds)
     return {"saved": len(browser_rounds)}
 
 
 @app.get("/api/statistics")
 def get_statistics() -> dict:
-    rounds = [CompletedRound.model_validate(item) for item in database.list_rounds()]
+    rounds = []
+    for saved_round in database.list_rounds():
+        validated_round = CompletedRound.model_validate(saved_round)
+        rounds.append(validated_round)
     return round_summary(rounds)
 
 
@@ -99,6 +104,7 @@ def preview_statistics(rounds: list[CompletedRound]) -> dict:
 PUBLIC_FILES = {
     "index.html", "script.js", "api-client.js", "style.css",
     "service-worker.js", "manifest.webmanifest", "nearby-courses.js",
+    "round-statistics.js",
 }
 app.mount("/icons", StaticFiles(directory=PROJECT_ROOT / "icons"), name="icons")
 

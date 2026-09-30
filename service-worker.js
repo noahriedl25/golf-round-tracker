@@ -1,10 +1,11 @@
 // Bump the version when app assets change so installed copies refresh together.
-const CACHE_NAME = "golf-round-tracker-v8";
+const CACHE_NAME = "golf-round-tracker-v11";
 const APP_FILES = [
     "./",
     "./index.html",
     "./style.css",
     "./api-client.js",
+    "./round-statistics.js",
     "./script.js",
     "./nearby-courses.js",
     "./manifest.webmanifest",

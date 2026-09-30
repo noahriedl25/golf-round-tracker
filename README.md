@@ -2,6 +2,19 @@
 
 A web application that helps golfers analyze their rounds and identify where they lose strokes.
 
+## Learn how everything works
+
+The browser's pure scoring/statistics functions are in `round-statistics.js`;
+`script.js` handles UI workflows. Run their tests with
+`node --test tests/round-statistics.test.js` (no npm install needed).
+The current refactor notes are in [CODE_GUIDE.md](docs/CODE_GUIDE.md).
+
+Read the [developer reference PDF](output/pdf/golf-tracker-explained.pdf)
+for file responsibilities, architecture, API and storage contracts, maintenance
+notes, and a JavaScript function index. Its editable source is
+[COMPLETE_GUIDE.md](docs/COMPLETE_GUIDE.md).
+
+
 ## Current Features
 
 ### Use it on your phone

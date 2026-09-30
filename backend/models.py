@@ -57,18 +57,32 @@ class CompletedRound(ApiModel):
         This runs after validation for both storage and statistics requests.
         Editing a hole therefore cannot leave stale totals in the database.
         """
-        self.total_score = sum(hole.score for hole in self.holes)
-        self.total_par = sum(hole.par for hole in self.holes)
+        # Start fresh so revalidating a scorecard does not count holes twice.
+        self.total_score = 0
+        self.total_par = 0
+        self.total_putts = 0
+        self.total_penalties = 0
+        self.fairway_opportunities = 0
+        self.fairways_hit = 0
+
+        for hole in self.holes:
+            self.total_score += hole.score
+            self.total_par += hole.par
+            self.total_putts += hole.putts
+            self.total_penalties += hole.penalties
+
+            # Par-3 holes do not count toward the fairway percentage.
+            if hole.par != 3:
+                self.fairway_opportunities += 1
+                if hole.fairway == "hit":
+                    self.fairways_hit += 1
+
         self.score_to_par = self.total_score - self.total_par
-        self.total_putts = sum(hole.putts for hole in self.holes)
-        self.total_penalties = sum(hole.penalties for hole in self.holes)
-        fairway_holes = [hole for hole in self.holes if hole.par != 3]
-        self.fairway_opportunities = len(fairway_holes)
-        self.fairways_hit = sum(hole.fairway == "hit" for hole in fairway_holes)
-        self.fairway_percentage = (
-            floor(self.fairways_hit / self.fairway_opportunities * 100 + 0.5)
-            if self.fairway_opportunities else 0
-        )
+        self.fairway_percentage = 0
+        if self.fairway_opportunities > 0:
+            percentage = self.fairways_hit / self.fairway_opportunities * 100
+            # Match the browser's rounding, including halfway values.
+            self.fairway_percentage = floor(percentage + 0.5)
         return self
 
     def as_browser_json(self) -> dict[str, Any]:

@@ -49,7 +49,11 @@ class RoundDatabase:
             ).fetchall()
         finally:
             connection.close()
-        return [json.loads(row["round_json"]) for row in rows]
+        rounds = []
+        for row in rows:
+            round_data = json.loads(row["round_json"])
+            rounds.append(round_data)
+        return rounds
 
     def save_round(self, round_data: dict[str, Any]) -> None:
         """Insert a new round or replace the data for a matching ID."""
@@ -98,19 +102,20 @@ class RoundDatabase:
         try:
             connection.execute("DELETE FROM rounds")
             # Nothing is permanent until commit. close() rolls back on failure.
+            # Prepare one tuple per round, then insert the whole batch.
+            rows = []
+            for round_data in rounds:
+                rows.append((
+                    round_data["id"],
+                    round_data["completedAt"],
+                    json.dumps(round_data),
+                ))
             connection.executemany(
                 """
                 INSERT INTO rounds (id, completed_at, round_json)
                 VALUES (?, ?, ?)
                 """,
-                [
-                    (
-                        round_data["id"],
-                        round_data["completedAt"],
-                        json.dumps(round_data),
-                    )
-                    for round_data in rounds
-                ],
+                rows,
             )
             connection.commit()
         finally:

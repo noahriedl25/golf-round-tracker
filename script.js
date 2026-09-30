@@ -5,6 +5,7 @@
  */
 
 // 1. Page references: cache elements once instead of repeatedly searching HTML.
+const homeSection = document.getElementById("home-section");
 const setupSection = document.getElementById("setup-section");
 const roundSection = document.getElementById("round-section");
 const historySection = document.getElementById("history-section");
@@ -316,14 +317,14 @@ editCourseButton.addEventListener("click", editSelectedCourse);
 discardRoundButton.addEventListener("click", discardSavedRound);
 resetCareerButton.addEventListener("click", resetCareerStatistics);
 undoCareerResetButton.addEventListener("click", undoCareerReset);
-customCourseBackButton.addEventListener("click", showSetup);
+customCourseBackButton.addEventListener("click", showCourses);
 customCourseForm.addEventListener("submit", saveCustomCourse);
 customHoleCountSelect.addEventListener("change", renderCustomHoleRows);
 previousButton.addEventListener("click", goToPreviousHole);
 nextButton.addEventListener("click", saveHoleAndContinue);
 resumeRoundButton.addEventListener("click", resumeSavedRound);
 historyButton.addEventListener("click", showRoundHistory);
-historyBackButton.addEventListener("click", showSetup);
+historyBackButton.addEventListener("click", showStatistics);
 statisticsButton.addEventListener("click", showStatistics);
 statisticsBackButton.addEventListener("click", showSetup);
 roundHomeButton.addEventListener("click", saveRoundAndGoHome);
@@ -970,11 +971,7 @@ function editSelectedCourse() {
 
 // The same form handles creation (null) and editing (an existing course).
 function showCustomCourse(course = null) {
-    setupSection.classList.add("hidden");
-    historySection.classList.add("hidden");
-    statisticsSection.classList.add("hidden");
-    roundSection.classList.add("hidden");
-    customCourseSection.classList.remove("hidden");
+    showPage(customCourseSection);
     customCourseMessage.textContent = "";
     customCourseForm.reset();
 
@@ -1184,8 +1181,7 @@ function startRound() {
         };
     });
 
-    setupSection.classList.add("hidden");
-    roundSection.classList.remove("hidden");
+    showPage(roundSection);
 
     saveActiveRound();
 
@@ -1406,8 +1402,7 @@ function resumeSavedRound() {
     }
     courseSelect.value = selectedCourse.id;
 
-    setupSection.classList.add("hidden");
-    roundSection.classList.remove("hidden");
+    showPage(roundSection);
 
     displayCurrentHole();
 }
@@ -1964,66 +1959,20 @@ function saveEditedCompletedRound(event) {
     renderHomeDashboard();
 }
 
-function calculateCompletedRoundTotals(holes) {
-    // Offline total calculation; Python validates these totals again on receipt.
-    const totals = holes.reduce(function (result, hole) {
-        result.totalScore += hole.score;
-        result.totalPar += hole.par;
-        result.totalPutts += hole.putts;
-        result.totalPenalties += hole.penalties;
-
-        if (hole.par !== 3) {
-            result.fairwayOpportunities++;
-
-            if (hole.fairway === "hit") {
-                result.fairwaysHit++;
-            }
-        }
-
-        return result;
-    }, {
-        totalScore: 0,
-        totalPar: 0,
-        totalPutts: 0,
-        totalPenalties: 0,
-        fairwaysHit: 0,
-        fairwayOpportunities: 0
-    });
-
-    return {
-        ...totals,
-        scoreToPar: totals.totalScore - totals.totalPar,
-        fairwayPercentage: totals.fairwayOpportunities === 0
-            ? 0
-            : Math.round((totals.fairwaysHit / totals.fairwayOpportunities) * 100)
-    };
-}
 
 function showRoundHistory() {
-    setupSection.classList.add("hidden");
-    statisticsSection.classList.add("hidden");
-    customCourseSection.classList.add("hidden");
-    roundSection.classList.add("hidden");
-    historySection.classList.remove("hidden");
+    showPage(historySection);
     renderRoundHistory();
 }
 
 function showSetup() {
-    historySection.classList.add("hidden");
-    statisticsSection.classList.add("hidden");
-    customCourseSection.classList.add("hidden");
-    roundSection.classList.add("hidden");
-    setupSection.classList.remove("hidden");
+    showPage(homeSection);
     checkForSavedRound();
     renderHomeDashboard();
 }
 
 function showStatistics() {
-    setupSection.classList.add("hidden");
-    historySection.classList.add("hidden");
-    customCourseSection.classList.add("hidden");
-    roundSection.classList.add("hidden");
-    statisticsSection.classList.remove("hidden");
+    showPage(statisticsSection);
     renderStatistics();
 }
 
@@ -2156,7 +2105,7 @@ function renderHomeDashboard() {
         button.addEventListener("click", function () {
             courseSelect.value = course.id;
             selectSavedCourse();
-            courseSelect.scrollIntoView({ behavior: "smooth", block: "center" });
+            showCourses();
         });
         homeFavoriteCourses.append(button);
     });
@@ -2173,93 +2122,7 @@ function formatDateOnly(dateText) {
 }
 
 // Offline equivalent of backend/statistics.py. Keep both algorithms consistent.
-function calculateHandicapEstimate(history) {
-    const differentials = history
-        .slice(0, 20)
-        .map(calculateEstimatedDifferential)
-        .filter(Number.isFinite)
-        .sort(function (first, second) {
-            return first - second;
-        });
-    const count = differentials.length;
 
-    if (count < 3) {
-        return {
-            value: null,
-            differentialCount: count,
-            usedDifferentials: 0
-        };
-    }
-
-    let usedDifferentials;
-    let adjustment = 0;
-
-    if (count === 3) {
-        usedDifferentials = 1;
-        adjustment = -2;
-    } else if (count === 4) {
-        usedDifferentials = 1;
-        adjustment = -1;
-    } else if (count === 5) {
-        usedDifferentials = 1;
-    } else if (count === 6) {
-        usedDifferentials = 2;
-        adjustment = -1;
-    } else if (count <= 8) {
-        usedDifferentials = 2;
-    } else if (count <= 11) {
-        usedDifferentials = 3;
-    } else if (count <= 14) {
-        usedDifferentials = 4;
-    } else if (count <= 16) {
-        usedDifferentials = 5;
-    } else if (count <= 18) {
-        usedDifferentials = 6;
-    } else if (count === 19) {
-        usedDifferentials = 7;
-    } else {
-        usedDifferentials = 8;
-    }
-
-    const average = differentials
-        .slice(0, usedDifferentials)
-        .reduce(function (total, differential) {
-            return total + differential;
-        }, 0) / usedDifferentials;
-    const value = Math.min(54, Math.round((average + adjustment) * 10) / 10);
-
-    return {
-        value: value,
-        differentialCount: count,
-        usedDifferentials: usedDifferentials
-    };
-}
-
-function calculateEstimatedDifferential(round) {
-    if (
-        !Array.isArray(round.holes) ||
-        round.holes.length === 0 ||
-        !Number.isFinite(round.totalScore) ||
-        !Number.isFinite(round.totalPar)
-    ) {
-        return null;
-    }
-
-    const holeFactor = 18 / round.holes.length;
-    const isRatedEighteen =
-        round.holes.length === 18 &&
-        Number.isFinite(round.courseRating) &&
-        Number.isFinite(round.slopeRating) &&
-        round.slopeRating > 0;
-    const adjustedScore = round.totalScore * holeFactor;
-    const courseRating = isRatedEighteen
-        ? round.courseRating
-        : round.totalPar * holeFactor;
-    const slopeRating = isRatedEighteen ? round.slopeRating : 113;
-    const differential = (113 / slopeRating) * (adjustedScore - courseRating);
-
-    return Math.round(differential * 10) / 10;
-}
 
 function renderPersonalBests(history) {
     // Each course/tee/nine combination gets its own record rather than one global best.
@@ -2313,88 +2176,6 @@ function renderPersonalBests(history) {
         });
 }
 
-function calculateStatistics(history) {
-    // Offline grouping mirrors Python's dashboard_statistics function.
-    let totalScore = 0;
-    let totalToPar = 0;
-    let totalPutts = 0;
-    let totalPenalties = 0;
-    let fairwaysHit = 0;
-    let fairwayOpportunities = 0;
-    const roundLengths = {};
-    const holeTypes = {
-        3: { strokes: 0, holes: 0 },
-        4: { strokes: 0, holes: 0 },
-        5: { strokes: 0, holes: 0 }
-    };
-
-    history.forEach(function (round) {
-        const holeCount = round.holes.length;
-
-        totalScore += round.totalScore;
-        totalToPar += round.scoreToPar;
-        totalPutts += round.totalPutts;
-        totalPenalties += round.totalPenalties;
-        fairwaysHit += round.fairwaysHit;
-        fairwayOpportunities += round.fairwayOpportunities;
-
-        if (roundLengths[holeCount] === undefined) {
-            roundLengths[holeCount] = {
-                rounds: 0,
-                totalScore: 0,
-                scoreToPar: 0,
-                totalPutts: 0,
-                totalPenalties: 0
-            };
-        }
-
-        roundLengths[holeCount].rounds++;
-        roundLengths[holeCount].totalScore += round.totalScore;
-        roundLengths[holeCount].scoreToPar += round.scoreToPar;
-        roundLengths[holeCount].totalPutts += round.totalPutts;
-        roundLengths[holeCount].totalPenalties += round.totalPenalties;
-
-        round.holes.forEach(function (hole) {
-            if (holeTypes[hole.par] !== undefined && Number.isFinite(hole.score)) {
-                holeTypes[hole.par].strokes += hole.score;
-                holeTypes[hole.par].holes++;
-            }
-        });
-    });
-
-    const bestRound = history.reduce(function (best, round) {
-        const roundRate = round.scoreToPar / round.holes.length;
-        const bestRate = best.scoreToPar / best.holes.length;
-
-        if (roundRate < bestRate) {
-            return round;
-        }
-
-        if (
-            roundRate === bestRate &&
-            round.totalScore < best.totalScore
-        ) {
-            return round;
-        }
-
-        return best;
-    });
-
-    return {
-        totalRounds: history.length,
-        averageScore: totalScore / history.length,
-        averageToPar: totalToPar / history.length,
-        averagePutts: totalPutts / history.length,
-        averagePenalties: totalPenalties / history.length,
-        fairwayPercentage:
-            fairwayOpportunities === 0
-                ? 0
-                : Math.round((fairwaysHit / fairwayOpportunities) * 100),
-        bestRound: bestRound,
-        roundLengths: roundLengths,
-        holeTypes: holeTypes
-    };
-}
 
 function renderHoleTypeStatistics(holeTypes) {
     holeTypeStats.replaceChildren();
@@ -2810,4 +2591,36 @@ function finishRound() {
     });
 
     summaryHistoryButton.addEventListener("click", showRoundHistory);
+}
+
+
+// Centralized screen navigation. Leaving scoring preserves the current draft.
+function showPage(page) {
+    if (!roundSection.classList.contains("hidden") && page !== roundSection &&
+        localStorage.getItem(ACTIVE_ROUND_KEY) !== null) {
+        saveInputProgress();
+    }
+    const pages = [homeSection, setupSection, statisticsSection, historySection,
+        customCourseSection, roundSection];
+    for (const screen of pages) {
+        screen.classList.toggle("hidden", screen !== page);
+    }
+    let activePage = page.id;
+    if (page === historySection) activePage = "statistics-section";
+    if (page === customCourseSection || page === roundSection) activePage = "setup-section";
+    for (const button of document.querySelectorAll(".primary-nav button")) {
+        if (button.dataset.page === activePage) button.setAttribute("aria-current", "page");
+        else button.removeAttribute("aria-current");
+    }
+    window.scrollTo(0, 0);
+    const heading = page.querySelector("h2");
+    if (heading) {
+        heading.setAttribute("tabindex", "-1");
+        heading.focus({preventScroll: true});
+    }
+}
+
+function showCourses() {
+    showPage(setupSection);
+    checkForSavedRound();
 }

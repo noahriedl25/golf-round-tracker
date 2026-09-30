@@ -63,6 +63,8 @@ class ApiTests(unittest.TestCase):
             self.assertEqual(json.load(response), [])
 
     def test_only_public_files_are_served(self):
+        with urlopen(self.base_url + "/round-statistics.js") as response:
+            self.assertIn(b"function calculateStatistics", response.read())
         with urlopen(self.base_url + "/") as response:
             self.assertIn(b"Golf Round Tracker", response.read())
         for path in ("/backend/app.py", "/.git/config", "/backend/data/golf_tracker.db"):

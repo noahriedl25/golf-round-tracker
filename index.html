@@ -25,16 +25,21 @@
 <body>
     <main>
         <header class="app-header">
-            <h1>Golf Round Tracker</h1>
-            <p>By: Noah Riedl</p>
+            <span class="brand-mark" aria-hidden="true">⛳</span><h1>Golf Round Tracker</h1><span class="brand-caption">PLAY · TRACK · IMPROVE</span>
         </header>
 
+        <nav class="primary-nav" aria-label="Main navigation">
+            <button type="button" data-page="home-section" aria-current="page" onclick="showSetup()">Home</button>
+            <button type="button" data-page="setup-section" onclick="showCourses()">Courses</button>
+            <button type="button" data-page="statistics-section" onclick="showStatistics()">Career</button>
+        </nav>
         <!-- Home screen: the IDs connect these controls to script.js. -->
-        <section id="setup-section">
+        <section id="home-section" aria-label="Home">
             <div class="home-heading">
                 <div>
-                    <h2>Home</h2>
-                    <p>Ready for your next round?</p>
+                    <p class="eyebrow">YOUR NEXT ROUND STARTS HERE</p>
+                    <h2>Make time for the course.</h2>
+                    <p>Your rounds, your progress, your game.</p>
                 </div>
             </div>
 
@@ -55,6 +60,13 @@
 
             <div id="active-round-card" class="active-round-card hidden">
                 <strong>Round in Progress</strong>
+            <button
+                id="resume-round-button"
+                class="secondary-button hidden"
+                type="button"
+            >
+                Resume Round
+            </button>
                 <span id="active-round-details"></span>
                 <button
                     id="discard-round-button"
@@ -76,7 +88,16 @@
                 <div id="home-favorite-courses" class="favorite-course-list"></div>
             </div>
 
-            <h3 class="start-round-heading">Start a Round</h3>
+            <div class="home-actions">
+                <button type="button" onclick="showCourses()">Find a course &amp; play →</button>
+            <button
+                id="statistics-button"
+                class="secondary-button"
+                type="button"
+            >
+                View Career
+            </button>
+            </div>
 
             <details class="phone-help">
                 <summary>Use this app on your phone</summary>
@@ -87,6 +108,10 @@
                 Rounds stay on this phone; they do not sync to other devices.</p>
             </details>
 
+        </section>
+        <section id="setup-section" class="hidden" aria-label="Courses">
+            <div class="section-heading"><div><p class="eyebrow">FIND YOUR NEXT FAIRWAY</p><h2>Courses</h2><p>Discover a course or play one you know.</p></div></div>
+            <div class="course-layout"><div class="course-discovery">
             <form id="course-search-form" class="course-search-form">
                 <label for="course-search-input">Search U.S. Courses</label>
 
@@ -127,7 +152,8 @@
             <p id="course-search-message" class="course-search-message" role="status" aria-live="polite"></p>
             <div id="course-search-results" class="course-search-results"></div>
 
-            <div class="setup-divider"><span>or</span></div>
+            </div><div class="course-preparation">
+            <h3>Set up your round</h3>
 
             <label for="course-select">Saved Courses</label>
 
@@ -181,30 +207,13 @@
                 </button>
             </div>
 
-            <button
-                id="resume-round-button"
-                class="secondary-button hidden"
-                type="button"
-            >
-                Resume Round
-            </button>
 
-            <button
-                id="history-button"
-                class="secondary-button"
-                type="button"
-            >
-                Round History
-            </button>
 
-            <button
-                id="statistics-button"
-                class="secondary-button"
-                type="button"
-            >
-                Statistics
-            </button>
 
+
+
+
+            </div></div>
             <p class="data-attribution">
                 Course data ©
                 <a href="https://opengolfapi.org/" target="_blank" rel="noreferrer">
@@ -245,7 +254,7 @@
         <section id="statistics-section" class="hidden">
             <div class="section-heading">
                 <div>
-                    <h2>Statistics</h2>
+                    <h2>Career</h2>
                     <p id="statistics-period-label" class="section-subtitle">
                         Your current career
                     </p>
@@ -260,6 +269,13 @@
                 </button>
             </div>
 
+            <button
+                id="history-button"
+                class="secondary-button"
+                type="button"
+            >
+                Round History
+            </button>
             <p id="empty-statistics-message" class="empty-state hidden">
                 Complete a round to start building your statistics.
             </p>
@@ -351,7 +367,7 @@
                 </div>
             </div>
 
-            <div class="career-settings-panel">
+            <details class="career-settings-panel"><summary>Career settings</summary>
                 <h3>Career Settings</h3>
                 <p id="career-start-text">
                     Career statistics include every completed round.
@@ -366,7 +382,7 @@
                 >
                     Undo Last Career Reset
                 </button>
-            </div>
+            </details>
         </section>
 
         <!-- Shared add/edit form. Hole inputs are generated from the hole count. -->
@@ -639,6 +655,7 @@
     </main>
 
     <script src="api-client.js"></script>
+    <script src="round-statistics.js"></script>
     <script src="script.js"></script>
     <script src="nearby-courses.js"></script>
 </body>
